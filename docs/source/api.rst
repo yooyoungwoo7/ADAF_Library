@@ -1,11 +1,39 @@
 API Reference
 =============
 
-This page will provide the API reference for the ADAF solver modules.
+ADAF core
+---------
 
-Modules
--------
+.. automodule:: pinn_lib.ADAF.api
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-- ``pinn_lib.ADAF``
-- ``pinn_lib.ADAF_seq``
-- ``pinn_lib.PINN``
+.. automodule:: pinn_lib.ADAF.model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: pinn_lib.ADAF.solver
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+ADAF_seq
+--------
+
+.. automodule:: pinn_lib.ADAF_seq.api
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: pinn_lib.ADAF_seq.core.model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: pinn_lib.ADAF_seq.core.solver
+   :members:
+   :undoc-members:
+   :show-inheritance:
