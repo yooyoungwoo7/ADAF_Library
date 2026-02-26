@@ -13,9 +13,7 @@ Contents
 
 .. toctree::
    :maxdepth: 2
-   :caption: Forward Problem Examples
+   :caption: Documentation
 
-   forward/System of ODE's
-   forward/Single ODE
-
+   forward/index
    api
