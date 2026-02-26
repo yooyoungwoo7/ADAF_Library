@@ -1,143 +1,124 @@
 Lotka_Volterra (ADAF_seq)
 =====================
 
+Lotka–Volterra (ADAF_seq)
+=========================
+
 Problem setup
+-------------
 
-We solve the Lotka–Volterra predator–prey system on a normalized time domain 
+We solve a normalized Lotka–Volterra predator–prey system on a time interval :math:`t \in [0, 1]`.
+The two state variables are
 
+- :math:`r(t)`: prey (normalized)
+- :math:`p(t)`: predator (normalized)
+
+The initial condition is given by
+
+.. math::
+
+   r(0)=\frac{100}{U}, \qquad p(0)=\frac{15}{U},
+
+where :math:`U=200` and :math:`R=20` are scaling constants used in the residual definition.
 
 Implementation
+--------------
 
-This section walks through the full implementation of an ADAF_seq solver run for the Lotka–Volterra system, including (i) residual definition, (ii) solver configuration, (iii) solver execution, and (iv) comparison with a numerical reference solution obtained via SciPy.
+This section walks through the implementation step-by-step. The complete runnable script is stored in
+``examples/tests_ADAF_seq_lotka.py`` and is included here using ``literalinclude``.
 
 1) Import libraries
+~~~~~~~~~~~~~~~~~~~
 
-We first import the ADAF_seq API from pinn_lib, along with common scientific Python utilities.
+We first import the ADAF_seq API and common numerical/plotting utilities.
+SciPy ``solve_ivp`` is used only to compute a reference solution for validation.
 
-import pinn_lib
-from pinn_lib import ADAF_seq
+.. literalinclude:: ../../examples/tests_ADAF_seq_lotka.py
+   :language: python
+   :linenos:
+   :lines: 1-7
 
-import numpy as np
-import tensorflow as tf
-import matplotlib.pyplot as plt
-from scipy.integrate import solve_ivp
+2) Define constants, time interval, and initial conditions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-ADAF_seq provides the sequential training-based ODE solver interface.
+We define the scaling constants (:math:`U, R`), the time interval bounds (:math:`lb, ub`),
+and normalized initial conditions ``ic = [r(0), p(0)]``.
 
-solve_ivp is used only as a reference numerical integrator for validation.
-
-2) Define constants, domain, and initial conditions
-
-We define scaling constants, time interval bounds, and normalized initial conditions.
-
-U = 200.0
-R = 20.0
-
-lb = 0.0
-ub = 1.0
-
-ic = [100.0 / U,   # r(0): prey
-      15.0  / U]   # p(0): predator
-
-lb, ub specify the solution interval.
-
-ic is a list of initial values for the ODE state vector 
-
+.. literalinclude:: ../../examples/tests_ADAF_seq_lotka.py
+   :language: python
+   :linenos:
+   :lines: 10-18
 
 3) Define the ODE residual function (callable)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ADAF_seq solver expects a residual function that evaluates the ODE constraint for each equation index i.
-Here, var_list[k] contains a pair 
+The ADAF_seq solver expects a residual callback ``ode_res(var_list, i)``.
+Here, ``var_list[k]`` provides a pair ``(y_k, y_k_t)`` corresponding to the state and its time derivative.
+We return the residual for equation index ``i``:
 
-def test3(var_list, i):
-    r, r_t = var_list[0]
-    p, p_t = var_list[1]
+- ``i=0``: prey equation residual
+- ``i=1``: predator equation residual
 
-    if i == 0:
-        rhs = (R / U) * (2.0 * U * r - 0.04 * (U ** 2) * r * p)
-        return r_t - rhs
+.. literalinclude:: ../../examples/tests_ADAF_seq_lotka.py
+   :language: python
+   :linenos:
+   :lines: 20-30
 
-    elif i == 1:
-        rhs = (R / U) * (0.02 * (U ** 2) * r * p - 1.06 * U * p)
-        return p_t - rhs
+4) Configure solver options (grid / Adam / L-BFGS)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+We construct three option objects:
 
-The solver minimizes these residuals over the time grid, subject to initial conditions.
+- ``GridOptions``: global sampling + segmentation setup
+- ``AdamOptions``: Adam training hyperparameters
+- ``LBFGSOptions``: optional L-BFGS refinement stage
 
-4) Configure solver options (grid / optimizer)
+.. literalinclude:: ../../examples/tests_ADAF_seq_lotka.py
+   :language: python
+   :linenos:
+   :lines: 34-37
 
-We build three option objects:
+5) Run ADAF_seq solver and extract the solution
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-GridOptions: discretization and segmentation setup
+The solver is executed through ``ADAF_seq.solve_ivp``.
+The returned ``solver.solution`` follows SciPy ``solve_ivp`` style:
 
-AdamOptions: training setup for Adam optimizer
+- ``t``: time array of shape ``(Nt_total,)``
+- ``y``: state array of shape ``(ode_num, Nt_total)``
 
-LBFGSOptions: whether to apply L-BFGS refinement
-
-grid  = ADAF_seq.GridOptions(lb=lb, ub=ub, Nt_total=2000, n_seg=10, Nt_seg=None, gamma=0.8, L=1.0)
-adam  = ADAF_seq.AdamOptions(epochs=20, inner=50, lr=1e-3, seed=0, dtype="float64", xla_predict=True, xla_step=False)
-lbfgs = ADAF_seq.LBFGSOptions(use=True)
-
-Notes:
-
-Nt_total=2000 defines total evaluation points across the full time domain.
-
-n_seg=10 partitions the domain into 10 segments for sequential training.
-
-dtype="float64" enforces higher precision (often important for stability/accuracy).
-
-xla_predict=True enables XLA compilation for inference (speed-up).
-
-5) Run the ADAF_seq solver
-
-We now call the library API. The solver returns an object containing a solution field compatible with SciPy’s solve_ivp output format.
-
-solver = ADAF_seq.solve_ivp(ode_res=test3, ic=ic, grid=grid, adam=adam, lbfgs=lbfgs, verbose=True)
-
-t = solver.solution.t                 # (Nt_total,)
-y = solver.solution.y                 # (ode_num, Nt_total)
-
-r_pred = y[0]
-p_pred = y[1]
-
-solver.solution.t is the time array used for plotting.
-
-solver.solution.y stores the predicted solution 
-
+.. literalinclude:: ../../examples/tests_ADAF_seq_lotka.py
+   :language: python
+   :linenos:
+   :lines: 39-47
 
 6) Compute a numerical reference solution (SciPy)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To validate the ADAF_seq output, we solve the same system using SciPy’s explicit ODE integrator.
+For validation, we solve the same ODE system using SciPy ``solve_ivp`` evaluated on the same grid ``t``.
+We set tight tolerances to obtain a high-accuracy reference.
 
-def rhs(t, y):
-    r, p = y
-    dr = (R / U) * (2.0 * U * r - 0.04 * (U ** 2) * r * p)
-    dp = (R / U) * (0.02 * (U ** 2) * r * p - 1.06 * U * p)
-    return [dr, dp]
+.. literalinclude:: ../../examples/tests_ADAF_seq_lotka.py
+   :language: python
+   :linenos:
+   :lines: 50-58
 
-sol = solve_ivp(rhs, (lb, ub), [ic[0], ic[1]], t_eval=t, rtol=1e-10, atol=1e-12)
-r_num = sol.y[0]
-p_num = sol.y[1]
+7) Plot time-series comparison
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-t_eval=t ensures both solutions are evaluated at identical time points.
+We compare ADAF_seq predictions against the numerical reference in a single time-series plot.
 
-Tight tolerances are used to obtain a high-accuracy reference.
+.. literalinclude:: ../../examples/tests_ADAF_seq_lotka.py
+   :language: python
+   :linenos:
+   :lines: 60-72
 
-7) Plot and compare (time series)
+8) Report relative L2 errors
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Finally, we plot the ADAF_seq solution and the numerical reference together.
+Finally, we compute relative L2 errors for each state and for the concatenated state vector.
 
-plt.figure(figsize=(10, 4))
-plt.plot(t, r_pred,  label="r ADAF_seq")
-plt.plot(t, r_num, "--", label="r numerical")
-plt.plot(t, p_pred,  label="p ADAF_seq")
-plt.plot(t, p_num, "--", label="p numerical")
-plt.xlabel("t")
-plt.ylabel("states")
-plt.title("Lotka–Volterra: time series")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-This comparison provides a direct visual check of whether the sequential ADAF solver reproduces the expected prey–predator dynamics over the full time interval.
+.. literalinclude:: ../../examples/tests_ADAF_seq_lotka.py
+   :language: python
+   :linenos:
+   :lines: 74-90
