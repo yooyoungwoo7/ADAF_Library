@@ -39,7 +39,7 @@ ADAF_seq
    :show-inheritance:
 
 
-ADAF 
+PINN
 ---------
 
 .. automodule:: pinn_lib.PINN.api
