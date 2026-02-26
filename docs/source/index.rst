@@ -15,5 +15,5 @@ Contents
    :maxdepth: 2
    :caption: Documentation
 
-   forward/index
+   forward
    api
