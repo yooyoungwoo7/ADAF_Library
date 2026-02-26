@@ -9,7 +9,7 @@ Lotka-Volterra System
    :caption: Examples
 
    ex_lotka_ADAF 
-   ex_lotka_AFAF_seq
+   ex_lotka_ADAF_seq
 
 Euler System
 --------
@@ -19,7 +19,7 @@ Euler System
    :caption: Examples
 
    ex_euler_ADAF 
-   ex_euler_AFAF_seq
+   ex_euler_ADAF_seq
 
 PINN
 ----
