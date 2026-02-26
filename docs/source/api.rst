@@ -1,7 +1,11 @@
-API
-===
+API Reference
+=============
 
-.. autosummary::
-   :toctree: generated
+This page will provide the API reference for the ADAF solver modules.
 
-   lumache
+Modules
+-------
+
+- ``pinn_lib.ADAF``
+- ``pinn_lib.ADAF_seq``
+- ``pinn_lib.PINN``
