@@ -1,7 +1,4 @@
-Usage
-=====
 
-This page explains how to use **ADAF_Library** to solve systems of ordinary differential equations (ODEs).
 
 Installation
 ------------
