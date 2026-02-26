@@ -1,7 +1,7 @@
 API Reference
 =============
 
-ADAF core
+ADAF 
 ---------
 
 .. automodule:: pinn_lib.ADAF.api
@@ -34,6 +34,25 @@ ADAF_seq
    :show-inheritance:
 
 .. automodule:: pinn_lib.ADAF_seq.core.solver
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+ADAF 
+---------
+
+.. automodule:: pinn_lib.PINN.api
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: pinn_lib.PINN.model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: pinn_lib.PINN.solver
    :members:
    :undoc-members:
    :show-inheritance:
