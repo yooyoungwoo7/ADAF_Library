@@ -29,6 +29,16 @@ autosummary_generate = True
 autodoc_mock_imports = ["tensorflow", "torch", "jax", "deepxde", "scipy", "numpy"]
 autodoc_member_order = "bysource"
 
+autodoc_mock_imports = [
+    "tensorflow",
+    "torch",
+    "jax",
+    "deepxde",
+    "scipy",
+    "numpy",
+    "matplotlib",
+]
+
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
