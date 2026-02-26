@@ -4,71 +4,7 @@ Lotka_Volterra (ADAF_seq)
 Problem setup
 
 We solve the Lotka–Volterra predator–prey system on a normalized time domain 
-𝑡
-∈
-[
-0
-,
-1
-]
-t∈[0,1].
-The two state variables are:
 
-𝑟
-(
-𝑡
-)
-r(t): prey population (normalized by 
-𝑈
-U)
-
-𝑝
-(
-𝑡
-)
-p(t): predator population (normalized by 
-𝑈
-U)
-
-Initial conditions are given as:
-
-𝑟
-(
-0
-)
-=
-100
-𝑈
-,
-𝑝
-(
-0
-)
-=
-15
-𝑈
-,
-r(0)=
-U
-100
-	​
-
-,p(0)=
-U
-15
-	​
-
-,
-
-with scaling constants 
-𝑈
-=
-200
-U=200, 
-𝑅
-=
-20
-R=20.
 
 Implementation
 
@@ -106,46 +42,12 @@ ic = [100.0 / U,   # r(0): prey
 lb, ub specify the solution interval.
 
 ic is a list of initial values for the ODE state vector 
-[
-𝑟
-(
-0
-)
-,
-𝑝
-(
-0
-)
-]
-[r(0),p(0)].
+
 
 3) Define the ODE residual function (callable)
 
 The ADAF_seq solver expects a residual function that evaluates the ODE constraint for each equation index i.
 Here, var_list[k] contains a pair 
-(
-𝑦
-𝑘
-,
-𝑑
-𝑦
-𝑘
-𝑑
-𝑡
-)
-(y
-k
-	​
-
-,
-dt
-dy
-k
-	​
-
-	​
-
-).
 
 def test3(var_list, i):
     r, r_t = var_list[0]
@@ -159,57 +61,6 @@ def test3(var_list, i):
         rhs = (R / U) * (0.02 * (U ** 2) * r * p - 1.06 * U * p)
         return p_t - rhs
 
-Interpretation:
-
-Equation 1 (prey): 
-𝑑
-𝑟
-𝑑
-𝑡
-−
-𝑓
-𝑟
-(
-𝑟
-,
-𝑝
-)
-=
-0
-dt
-dr
-	​
-
-−f
-r
-	​
-
-(r,p)=0
-
-Equation 2 (predator): 
-𝑑
-𝑝
-𝑑
-𝑡
-−
-𝑓
-𝑝
-(
-𝑟
-,
-𝑝
-)
-=
-0
-dt
-dp
-	​
-
-−f
-p
-	​
-
-(r,p)=0
 
 The solver minimizes these residuals over the time grid, subject to initial conditions.
 
@@ -252,18 +103,7 @@ p_pred = y[1]
 solver.solution.t is the time array used for plotting.
 
 solver.solution.y stores the predicted solution 
-[
-𝑟
-(
-𝑡
-)
-,
-𝑝
-(
-𝑡
-)
-]
-[r(t),p(t)].
+
 
 6) Compute a numerical reference solution (SciPy)
 
