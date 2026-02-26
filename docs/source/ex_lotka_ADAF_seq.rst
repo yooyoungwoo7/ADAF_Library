@@ -1,4 +1,3 @@
-
 Lotka–Volterra (ADAF_seq)
 =========================
 
