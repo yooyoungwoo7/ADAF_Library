@@ -1,13 +1,10 @@
-Welcome to Lumache's documentation!
-===================================
+ADAF_Library
+============
 
-**Lumache** (/lu'make/) is a Python library for cooks and food lovers
-that creates recipes mixing random ingredients.
-It pulls data from the `Open Food Facts database <https://world.openfoodfacts.org/>`_
-and offers a *simple* and *intuitive* API.
+ADAF_Library is a Python library for solving systems of ordinary differential equations (ODEs)
+using an ADA-F (Adaptive Decomposition Approach–Fourier/Feature) + PINN-style workflow.
+This documentation provides installation, quickstart examples, and API reference.
 
-Check out the :doc:`usage` section for further information, including
-how to :ref:`installation` the project.
 
 .. note::
 
