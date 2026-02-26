@@ -2,9 +2,7 @@ ADAF_Library
 ============
 
 ADAF_Library is a Python library for solving systems of ordinary differential equations (ODEs)
-using an ADA-F (Adaptive Decomposition Approach–Fourier/Feature) + PINN-style workflow.
-This documentation provides installation, quickstart examples, and API reference.
-
+with an ADA-F sequential PINN-style solver workflow.
 
 .. note::
 
@@ -14,6 +12,8 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Documentation
 
    usage
    api
