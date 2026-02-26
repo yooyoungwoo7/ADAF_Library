@@ -1,4 +1,10 @@
 # Configuration file for the Sphinx documentation builder.
+import os
+import sys
+sys.path.insert(0, os.path.abspath("../.."))
+
+
+
 
 # -- Project information
 
@@ -18,6 +24,10 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
 ]
+
+autosummary_generate = True
+autodoc_mock_imports = ["tensorflow", "torch", "jax", "deepxde", "scipy", "numpy"]
+autodoc_member_order = "bysource"
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
