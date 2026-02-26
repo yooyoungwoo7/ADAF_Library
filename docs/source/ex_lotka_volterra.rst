@@ -1,1 +1,4 @@
-This is an example of solving the lotka_volterra System of ODE
+Lotka–Volterra (ADAF)
+=====================
+
+This is an example of solving the Lotka–Volterra system of ODEs.
