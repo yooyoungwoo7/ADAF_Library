@@ -1,34 +1,28 @@
 Usage
 =====
 
-.. _installation:
+This page explains how to use **ADAF_Library** to solve systems of ordinary differential equations (ODEs).
 
 Installation
 ------------
 
-To use Lumache, first install it using pip:
+Clone the repository and install documentation/build dependencies:
 
-.. code-block:: console
+.. code-block:: bash
 
-   (.venv) $ pip install lumache
+   git clone https://github.com/yooyoungwoo7/ADAF_Library.git
+   cd ADAF_Library
+   pip install -r docs/requirements.txt
 
-Creating recipes
-----------------
+Library usage
+-------------
 
-To retrieve a list of random ingredients,
-you can use the ``lumache.get_random_ingredients()`` function:
+The core solver implementation is provided under ``pinn_lib/``.
+This documentation will be updated with minimal runnable examples (e.g., Lotka–Volterra, Euler rigid body).
 
-.. autofunction:: lumache.get_random_ingredients
+Project structure (high level)
+------------------------------
 
-The ``kind`` parameter should be either ``"meat"``, ``"fish"``,
-or ``"veggies"``. Otherwise, :py:func:`lumache.get_random_ingredients`
-will raise an exception.
-
-.. autoexception:: lumache.InvalidKindError
-
-For example:
-
->>> import lumache
->>> lumache.get_random_ingredients()
-['shells', 'gorgonzola', 'parsley']
-
+- ``pinn_lib/ADAF``: ADAF solver core components
+- ``pinn_lib/ADAF_seq``: sequential ADAF solver workflow
+- ``pinn_lib/PINN``: PINN-related utilities and models
