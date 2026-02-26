@@ -6,7 +6,6 @@ ADAF
 
 .. toctree::
    :maxdepth: 1
-   :titlesonly:
    :caption: Examples
 
    ex_lotka_volterra
@@ -17,7 +16,6 @@ ADAF_seq
 
 .. toctree::
    :maxdepth: 1
-   :titlesonly:
    :caption: Examples
 
    ex_seq_lotka_volterra
