@@ -18,16 +18,19 @@ through physics-informed learning. Especially based on the ADA-F (Anti Derivativ
   - Trains by minimizing ODE residuals and initial-condition mismatch without requiring paired data.
 
 
-Schematic illustration of ADA-F: 
+Schematic illustration of ADA-F:
+
 .. figure:: ADAF_schematic.png
    :width: 90%
    :align: center
-   :alt: Lotka–Volterra time-series comparison
+   :alt: ADA-F schematic illustration
 
 
+Read the following paper for more information: `"Anti-derivatives approximator for enhancing physics-informed
+neural networks"  <https://www.sciencedirect.com/science/article/pii/S0045782524002561>`_
 
-Read the following paper for more information: `S0045782524002561 <https://www.sciencedirect.com/science/article/pii/S0045782524002561>`_.
-
+|
+|
 
 .. note::
 
