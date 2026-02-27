@@ -122,3 +122,10 @@ The resulting plot of the numerical solution and the model prediction follows:
    :alt: Lotka–Volterra time-series comparison
 
 
+Complete source code
+--------------------
+
+.. literalinclude:: ../../examples/tests_ADAF_seq_lotka.py
+   :language: python
+   :linenos:
+
