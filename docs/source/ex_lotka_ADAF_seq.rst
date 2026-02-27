@@ -116,7 +116,7 @@ We compare ADAF_seq predictions against the numerical reference in a single time
 
 The resulting plot of the numerical solution and the model prediction follows: 
 
-.. figure:: docs/source/100seg_10x4.png
+.. figure:: 100seg_10x4.png
    :width: 90%
    :align: center
    :alt: Lotka–Volterra time-series comparison
