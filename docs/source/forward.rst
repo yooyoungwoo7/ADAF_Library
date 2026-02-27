@@ -1,6 +1,9 @@
 Forward Problem Examples
 ========================
 
+These are some examples of solving forward problems of ODE's 
+
+
 Lotka-Volterra System
 ----
 
