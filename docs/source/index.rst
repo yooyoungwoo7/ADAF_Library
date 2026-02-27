@@ -25,11 +25,11 @@ Schematic illustration of ADA-F:
    :align: center
    :alt: ADA-F schematic illustration
 
+|
 
 Read the following paper for more information: `"Anti-derivatives approximator for enhancing physics-informed
 neural networks"  <https://www.sciencedirect.com/science/article/pii/S0045782524002561>`_
 
-|
 |
 
 .. note::
