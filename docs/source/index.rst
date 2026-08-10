@@ -31,7 +31,7 @@ through physics-informed learning. Especially based on the ADA-F (Anti Derivativ
 
 Schematic illustration of ADA-F:
 
-.. figure:: ADAF_schematic.png
+.. figure:: ADA_schematic.png
    :width: 90%
    :align: center
    :alt: ADA-F schematic illustration
