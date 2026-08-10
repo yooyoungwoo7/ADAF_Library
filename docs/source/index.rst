@@ -14,7 +14,7 @@ through physics-informed learning. Especially based on the ADA-F (Anti Derivativ
 
 - Parameter-efficient representation (vs. generic PINNs)
 
-  - Uses a structured ADA-F basis expansion so the number of trainable parameters can be kept smaller than a standard fully-connected PINN for the same time horizon.
+  - Uses a structured ADA-F  basis expansion so the number of trainable parameters can be kept smaller than a standard fully-connected PINN for the same time horizon.
 
 - Hard enforcement of initial conditions
 
