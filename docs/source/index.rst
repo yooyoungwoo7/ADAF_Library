@@ -38,7 +38,7 @@ Schematic illustration of ADA-F:
 
 |
 
-Read the following paper for more information: `"Anti-derivatives approximator for enhancing physics-informed
+Rea d the following paper for more information: `"Anti-derivatives approximator for enhancing physics-informed
 neural networks"  <https://www.sciencedirect.com/science/article/pii/S0045782524002561>`_
 
 |
