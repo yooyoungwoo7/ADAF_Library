@@ -1,35 +1,45 @@
-ADAF_Library
-============
+ADALib
+======
 
-ADAF_Library is a Python library aimed to solve systems of ordinary differential equations (ODEs)
-through physics-informed learning. Especially based on the ADA-F (Anti Derivative Approximator-Fourier series based)
+ADALib is an Anti-Derivative Approximator (ADA)-based solver library for systems of ordinary differential equations (ODEs).
+It approximates derivative representations using orthogonal basis functions and reconstructs state trajectories through antiderivative integration.
 
 - Anti-Derivative Approximator (ADA)
 
-  - Builds the solution by modeling its derivative and reconstructing the state via integration.
+  - Represents the derivative of each state using a compact set of trainable panel weights.
+  - Reconstructs the state trajectory through antiderivative integration of the derivative representation.
 
-- Fourier-series representation
+- Orthogonal basis representation
 
-  - Represents the derivative with a compact set of Fourier modes for stable, smooth approximation.
-
-- Parameter-efficient representation (vs. generic PINNs)
-
-  - Uses a structured ADA-F basis expansion so the number of trainable parameters can be kept smaller than a standard fully-connected PINN for the same time horizon.
+  - Approximates the derivative representation using orthogonal basis functions.
+  - Provides a compact and structured representation of the solution over the time domain.
 
 - Hard enforcement of initial conditions
 
-  - Supports trial-solution forms (or segment-wise anchoring) that can fix the initial condition exactly rather than only penalizing it.
+  - Initial conditions are naturally embedded through integration constants.
+  - This allows the reconstructed trajectory to satisfy the prescribed initial condition without introducing a separate penalty term.
 
-- Piecewise sequential solving (ADAF_seq)
+- Physically interpretable panel weights
 
-  - Splits the time domain into segments and solves them sequentially to reduce error accumulation and improve training stability.
+  - The panel-weight coefficients represent local derivative information over the solution domain.
+  - Unlike opaque latent variables in black-box neural solvers, the trainable coefficients therefore carry an explicit physical meaning.
 
-- PINN-style residual minimization
+- System-level ODE formulation
 
-  - Trains by minimizing ODE residuals and initial-condition mismatch without requiring paired data.
+  - Users can directly define and train systems of coupled ODEs.
+  - Complex neural-network architectures do not need to be implemented from scratch.
+
+- Physics-informed training
+
+  - The trainable panel weights are optimized by minimizing the governing ODE residuals.
+  - This enables solution of ODE systems without requiring paired reference-solution data.
 
 
-Schematic illustration of ADA-F:
+.. raw:: html
+
+   <br>
+
+Schematic illustration of anti derivative approximation:
 
 .. figure:: ADA_schematic.png
    :width: 90%
@@ -53,7 +63,8 @@ Contents
 .. toctree::
    :maxdepth: 2
    :caption: Documentation
-
+   
+   user_implementation
    forward
    inverse
    operator
