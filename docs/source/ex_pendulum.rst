@@ -296,6 +296,6 @@ user to manually construct the visualization from ``result.t`` and
 Complete Source Code
 --------------------
 
-.. literalinclude:: ../../examples/test_adalib_forward_pendulum.py
+.. literalinclude:: ../../tests/test_adalib_forward_pendulum.py
    :language: python
    :linenos:
