@@ -11,8 +11,8 @@ Lotka-Volterra System
    :maxdepth: 1
 
 
-   ex_lotka_ADAF 
-   ex_lotka_ADAF_seq
+   ex_lotka
+
 
 Euler System
 --------
@@ -21,8 +21,8 @@ Euler System
    :maxdepth: 1
 
 
-   ex_euler_ADAF 
-   ex_euler_ADAF_seq
+   ex_euler
+
 
 PINN
 ----
