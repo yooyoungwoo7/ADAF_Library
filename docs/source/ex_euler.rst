@@ -1,148 +1,371 @@
-Euler rigid body 
-===========================
+Euler Rigid-Body System
+=======================
 
-Problem setup
+Problem Setup
 -------------
 
-We solve the Euler equations for a torque-free rigid body described by three coupled first-order ODEs on a time interval :math:`t \in [0, 2.5]`.
-The three state variables are the angular velocity components
+This example demonstrates how to solve a user-defined Euler rigid-body
+system using the ADALib forward solver.
 
-- :math:`w_1(t)`
-- :math:`w_2(t)`
-- :math:`w_3(t)`
-
-With principal moments of inertia :math:`I_1, I_2, I_3`, the governing equations are
+For torque-free rigid-body rotation, the angular velocities
+:math:`\omega_1`, :math:`\omega_2`, and :math:`\omega_3` satisfy
 
 .. math::
 
-   \frac{d w_1}{dt} = \frac{I_2 - I_3}{I_2 I_3} w_2 w_3, \qquad
-   \frac{d w_2}{dt} = \frac{I_3 - I_1}{I_1 I_3} w_1 w_3, \qquad
-   \frac{d w_3}{dt} = \frac{I_1 - I_2}{I_1 I_2} w_1 w_2.
-
-The initial condition is given by
-
-.. math::
-
-   w_1(0)=1,\qquad w_2(0)=1,\qquad w_3(0)=1.
-
-In this example, we use
+   \frac{d\omega_1}{dt}
+   =
+   \frac{I_2-I_3}{I_2I_3}
+   \omega_2\omega_3,
 
 .. math::
 
-   I_1 = 0.2,\qquad I_2 = 0.3,\qquad I_3 = 0.4.
+   \frac{d\omega_2}{dt}
+   =
+   \frac{I_3-I_1}{I_1I_3}
+   \omega_1\omega_3,
+
+.. math::
+
+   \frac{d\omega_3}{dt}
+   =
+   \frac{I_1-I_2}{I_1I_2}
+   \omega_1\omega_2.
+
+The principal moments of inertia are
+
+.. math::
+
+   I_1=0.2,\qquad
+   I_2=0.3,\qquad
+   I_3=0.4.
+
+The initial condition is
+
+.. math::
+
+   \omega_1(0)
+   =
+   \omega_2(0)
+   =
+   \omega_3(0)
+   =
+   1,
+
+and the system is solved over
+
+.. math::
+
+   t\in[0,2.5].
 
 
 Implementation
 --------------
 
-This section walks through the implementation step-by-step. The complete runnable source code is stored at the end.
+The implementation follows exactly the same ADALib workflow as the
+Lotka–Volterra example:
+
+1. Define the governing ODE equations.
+2. Construct a ``CallableODESystem``.
+3. Configure ``ForwardOptions``.
+4. Execute ``adalib.run_forward``.
 
 
-1) Import libraries
+1. Import Libraries
 ~~~~~~~~~~~~~~~~~~~
 
-We first import the ADAF_seq library and common numerical/plotting utilities.
-SciPy ``solve_ivp`` is used only to compute a reference solution for validation.
+.. code-block:: python
 
-.. literalinclude:: ../../examples/tests_ADAF_seq_euler.py
-   :language: python
-   :linenos:
-   :lines: 1-7
-
-
-2) Define constants, time interval, and initial conditions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-We define the inertia parameters (:math:`I_1, I_2, I_3`), the time interval bounds (:math:`lb, ub`),
-and initial conditions ``ic = [w1(0), w2(0), w3(0)]``.
-
-.. literalinclude:: ../../examples/tests_ADAF_seq_euler.py
-   :language: python
-   :linenos:
-   :lines: 10-18
+   import numpy as np
+   import matplotlib
+   matplotlib.use("Agg")
+   import matplotlib.pyplot as plt
+   from scipy.integrate import solve_ivp
+   import adalib
 
 
-3) Define the ODE residual function (callable)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2. Define the System Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ADAF_seq solver expects a callable function ``ode_res(var_list, i)``, which returns the residual of the system of ODE.
-Here, ``var_list[k]`` provides a pair ``(y_k, y_k_t)`` corresponding to the state and its time derivative.
-The function should return the residual for equation index ``i``:
+The three principal moments of inertia are specified as
 
-- ``i=0``: equation for :math:`w_1`
-- ``i=1``: equation for :math:`w_2`
-- ``i=2``: equation for :math:`w_3`
+.. code-block:: python
 
-.. literalinclude:: ../../examples/tests_ADAF_seq_euler.py
-   :language: python
-   :linenos:
-   :lines: 21-38
+   I1 = 0.2
+   I2 = 0.3
+   I3 = 0.4
 
 
-4) Configure solver options (grid / Adam / L-BFGS)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+3. Define the Numerical RHS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We construct three option objects before calling the solver:
+The conventional numerical representation of the Euler equations is
+defined as a Python callable.
 
-- ``GridOptions``: global sampling + segmentation setup
-- ``AdamOptions``: Adam training hyperparameters
-- ``LBFGSOptions``: optional L-BFGS refinement stage
+.. code-block:: python
 
-.. literalinclude:: ../../examples/tests_ADAF_seq_euler.py
-   :language: python
-   :linenos:
-   :lines: 41-44
+   def euler_rhs(t, state, u=None, p=None):
+       w1, w2, w3 = state
 
+       dw1_dt = ((I2 - I3) / (I2 * I3)) * w2 * w3
+       dw2_dt = ((I3 - I1) / (I1 * I3)) * w1 * w3
+       dw3_dt = ((I1 - I2) / (I1 * I2)) * w1 * w2
 
-5) Run ADAF_seq solver and extract the solution
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The solver is executed through ``ADAF_seq.solve_ivp``.
-The returned ``solver.solution`` provides:
-
-- ``t``: time array of shape ``(Nt_total,)``
-- ``y``: state array of shape ``(3, Nt_total)`` where rows correspond to :math:`w_1, w_2, w_3`
-
-.. literalinclude:: ../../examples/tests_ADAF_seq_euler.py
-   :language: python
-   :linenos:
-   :lines: 46-62
+       return [
+           dw1_dt,
+           dw2_dt,
+           dw3_dt,
+       ]
 
 
-6) Compute a numerical reference solution (Optional)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+4. Define the Physics Residual
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For validation, we solve the same ODE system using SciPy ``solve_ivp`` evaluated on the same grid ``t``.
-We set tight tolerances to obtain a high-accuracy reference.
+The physics-informed representation is specified independently through
+``rhs_tf``.
 
-.. literalinclude:: ../../examples/tests_ADAF_seq_euler.py
-   :language: python
-   :linenos:
-   :lines: 64-73
+.. code-block:: python
+
+   def euler_rhs_tf(var_list, i, u=None, p=None):
+       w1, w1_t = var_list[0]
+       w2, w2_t = var_list[1]
+       w3, w3_t = var_list[2]
+
+       if i == 0:
+           return w1_t - (
+               ((I2 - I3) / (I2 * I3)) * w2 * w3
+           )
+
+       elif i == 1:
+           return w2_t - (
+               ((I3 - I1) / (I1 * I3)) * w1 * w3
+           )
+
+       else:
+           return w3_t - (
+               ((I1 - I2) / (I1 * I2)) * w1 * w2
+           )
+
+The corresponding residual equations are
+
+.. math::
+
+   \mathcal{R}_1
+   =
+   \dot{\omega}_1
+   -
+   \frac{I_2-I_3}{I_2I_3}
+   \omega_2\omega_3,
+
+.. math::
+
+   \mathcal{R}_2
+   =
+   \dot{\omega}_2
+   -
+   \frac{I_3-I_1}{I_1I_3}
+   \omega_1\omega_3,
+
+.. math::
+
+   \mathcal{R}_3
+   =
+   \dot{\omega}_3
+   -
+   \frac{I_1-I_2}{I_1I_2}
+   \omega_1\omega_2.
 
 
-7) Plot time-series comparison (Optional)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+5. Construct CallableODESystem
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-We compare ADAF_seq predictions against the numerical reference in a single time-series plot.
+The numerical and physics-informed definitions are combined into a single
+system object.
 
-.. literalinclude:: ../../examples/tests_ADAF_seq_euler.py
-   :language: python
-   :linenos:
-   :lines: 75-88
+.. code-block:: python
 
-The resulting plot of the numerical solution and the model prediction follows:
+   system = adalib.CallableODESystem(
+       name="euler_rigid_body",
+       rhs=euler_rhs,
+       rhs_tf=euler_rhs_tf,
+       state_names=["omega1", "omega2", "omega3"],
+   )
 
-.. figure:: 50seg.png
-   :width: 90%
+Once the ``CallableODESystem`` is constructed, the remaining workflow is
+independent of the detailed form of the governing equations.
+
+
+6. Configure ForwardOptions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The solver and optimization settings are defined through
+``ForwardOptions``.
+
+.. code-block:: python
+
+   options = adalib.ForwardOptions(
+       basis="adaf",
+       n_seg=20,
+       N_p=10,
+       N_m=100,
+       Nt_total=500,
+       epochs=5,
+       adam_inner=100,
+       use_lbfgs=True,
+       dtype="float64",
+       verbose=True,
+   )
+
+The mathematical system and numerical configuration are therefore kept
+separate.
+
+
+7. Run the Forward Solver
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The initial condition and simulation interval are
+
+.. code-block:: python
+
+   X0 = [1.0, 1.0, 1.0]
+   T_SPAN = (0.0, 2.5)
+
+The system is solved using
+
+.. code-block:: python
+
+   result = adalib.run_forward(
+       system=system,
+       x0=X0,
+       t_span=T_SPAN,
+       options=options,
+   )
+
+
+8. Access the Solution
+~~~~~~~~~~~~~~~~~~~~~~
+
+The standardized forward result object provides the output time grid and
+all three angular-velocity trajectories.
+
+.. code-block:: python
+
+   t = result.t
+   y = result.y
+
+The state array follows the order specified in ``state_names``:
+
+.. code-block:: text
+
+   y[0] → omega1
+   y[1] → omega2
+   y[2] → omega3
+
+The result can be inspected using
+
+.. code-block:: python
+
+   print(f"t shape : {t.shape}")
+   print(f"y shape : {y.shape}")
+   print(f"t range : [{t[0]:.3f}, {t[-1]:.3f}]")
+
+
+9. Numerical Reference Solution
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For validation, the numerical RHS stored in the system object can be
+passed directly to SciPy ``solve_ivp``.
+
+.. code-block:: python
+
+   sol_ref = solve_ivp(
+       lambda t, x: system.rhs(t, x),
+       T_SPAN,
+       X0,
+       method="RK45",
+       t_eval=t,
+       rtol=1e-10,
+       atol=1e-12,
+   )
+
+   ref = sol_ref.y
+
+
+10. Relative Error
+~~~~~~~~~~~~~~~~~~
+
+The relative :math:`L_2` error for each state is computed as
+
+.. math::
+
+   \varepsilon_i
+   =
+   \frac{
+   \left\|
+   \omega_i^{\mathrm{ADA}}
+   -
+   \omega_i^{\mathrm{ref}}
+   \right\|_2
+   }{
+   \left\|
+   \omega_i^{\mathrm{ref}}
+   \right\|_2
+   }.
+
+.. code-block:: python
+
+   state_names = [
+       "$\\omega_1$",
+       "$\\omega_2$",
+       "$\\omega_3$",
+   ]
+
+   for i, name in enumerate(state_names):
+       err = (
+           np.linalg.norm(y[i] - ref[i])
+           / (np.linalg.norm(ref[i]) + 1e-12)
+       )
+       print(f"{name}: {err:.4e}")
+
+
+11. Visualization
+~~~~~~~~~~~~~~~~~
+
+The three ADALib trajectories are compared with the RK45 reference.
+
+.. code-block:: python
+
+   colors = ["C0", "C1", "C2"]
+
+   fig, ax = plt.subplots(figsize=(5, 4))
+
+   for j in range(3):
+       ax.plot(t, y[j], color=colors[j], lw=1.5)
+       ax.plot(t, ref[j], "k--", lw=1.0)
+
+   ax.set_ylabel(
+       "$\\omega_1,\\ \\omega_2,\\ \\omega_3$"
+   )
+   ax.set_xlabel("$t$")
+   ax.set_xlim(t[0], t[-1])
+
+   fig.tight_layout()
+   fig.savefig(
+       "euler_forward_result.png",
+       dpi=150,
+       bbox_inches="tight",
+   )
+
+The resulting trajectory comparison is shown below.
+
+.. figure:: euler_forward_result.png
+   :width: 75%
    :align: center
-   :alt: Euler rigid body time-series comparison
+   :alt: Euler rigid-body forward solution
 
 
-
-Complete source code
+Complete Source Code
 --------------------
 
-.. literalinclude:: ../../examples/tests_ADAF_seq_euler.py
+.. literalinclude:: ../../examples/test_adalib_forward_euler.py
    :language: python
    :linenos:
