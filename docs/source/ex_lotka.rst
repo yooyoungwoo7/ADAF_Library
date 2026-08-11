@@ -403,6 +403,6 @@ Complete Source Code
 
 The complete runnable example is available below.
 
-.. literalinclude:: ../../examples/test_adalib_forward_lotka.py
+.. literalinclude:: ../../tests/test_adalib_forward_lotka.py
    :language: python
    :linenos:
