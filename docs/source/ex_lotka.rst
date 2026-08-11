@@ -1,4 +1,4 @@
-Lotka–Volterra (ADAF_seq)
+Lotka–Volterra 
 =========================
 
 Problem setup
