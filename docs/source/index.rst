@@ -55,4 +55,7 @@ Contents
    :caption: Documentation
 
    forward
+   inverse
+   operator
+   control
    api
