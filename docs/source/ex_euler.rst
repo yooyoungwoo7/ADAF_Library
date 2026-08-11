@@ -366,6 +366,6 @@ The resulting trajectory comparison is shown below.
 Complete Source Code
 --------------------
 
-.. literalinclude:: ../../examples/test_adalib_forward_euler.py
+.. literalinclude:: ../../tests/test_adalib_forward_euler.py
    :language: python
    :linenos:
