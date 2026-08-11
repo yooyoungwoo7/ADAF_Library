@@ -1,8 +1,14 @@
 # Configuration file for the Sphinx documentation builder.
+import os
+import sys
+sys.path.insert(0, os.path.abspath("../.."))
+
+
+
 
 # -- Project information
 
-project = 'Lumache'
+project = 'ADAF_Library'
 copyright = '2021, Graziella'
 author = 'Graziella'
 
@@ -17,6 +23,20 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+]
+
+autosummary_generate = True
+autodoc_mock_imports = ["tensorflow", "torch", "jax", "deepxde", "scipy", "numpy"]
+autodoc_member_order = "bysource"
+
+autodoc_mock_imports = [
+    "tensorflow",
+    "torch",
+    "jax",
+    "deepxde",
+    "scipy",
+    "numpy",
+    "matplotlib",
 ]
 
 intersphinx_mapping = {
