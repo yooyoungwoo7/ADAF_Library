@@ -1,4 +1,4 @@
-Euler rigid body (ADAF_seq)
+Euler rigid body 
 ===========================
 
 Problem setup
