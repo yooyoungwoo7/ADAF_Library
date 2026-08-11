@@ -1,0 +1,26 @@
+{
+  "system_name": "lotka_volterra",
+  "state_names": [
+    "U",
+    "R"
+  ],
+  "t_span": [
+    0.0,
+    1.0
+  ],
+  "x0": [
+    0.5,
+    0.075
+  ],
+  "basis": "adaf",
+  "n_seg": 30,
+  "lambda_physics": 1.0,
+  "lambda_data": 1.0,
+  "runtime_sec": 177.72354470007122,
+  "estimated_params": {
+    "alpha": 40.0297453082763,
+    "gamma": 21.167496699020727
+  },
+  "n_steps": 150030,
+  "final_loss": 1.4799987995377932e-05
+}
