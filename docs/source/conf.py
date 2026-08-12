@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 
 # -- Project information
 
-project = 'ADAF_Library'
+project = 'ADA Library'
 copyright = '2021, Graziella'
 author = 'Graziella'
 
