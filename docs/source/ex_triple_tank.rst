@@ -338,7 +338,7 @@ Each case contains
 
 
 8. Run Inference for New Configurations
-```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The first result has already been obtained during the training call.
 
@@ -347,46 +347,38 @@ additional training.
 
 .. code-block:: python
 
-all_results = [result]
+   all_results = [result]
 
-for tc in TEST_CASES[1:]:
-r = adalib.run_operator(
-system=system,
-x0=tc["x0"],
-t_span=(0.0, 0.5),
-params=tc["params"],
-options=options_infer,
-)
+   for tc in TEST_CASES[1:]:
+       r = adalib.run_operator(
+           system=system,
+           x0=tc["x0"],
+           t_span=(0.0, 0.5),
+           params=tc["params"],
+           options=options_infer,
+       )
 
-```
-   all_results.append(r)
-```
+       all_results.append(r)
 
-The same trained operator is therefore reused as
+The same trained operator is therefore reused for multiple system
+configurations without repeating the training stage.
 
 .. code-block:: text
 
-```
-             Trained Operator
-                   │
-      ┌────────────┼────────────┐
-      ↓            ↓            ↓
-    Case 1       Case 2       Case 3
-      ↓            ↓            ↓
-```
+   Trained Operator
+          |
+          +-- Case 1 --> OperatorResult
+          +-- Case 2 --> OperatorResult
+          +-- Case 3 --> OperatorResult
 
-OperatorResult OperatorResult OperatorResult
-
-without repeating the training stage.
 
 9. Multi-Case Numerical Comparison
-
-```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The operator predictions are compared with numerical reference
 trajectories for all three test cases.
 
-First, state names and plot labels are defined.
+First, the state names and plot labels are defined.
 
 .. code-block:: python
 
@@ -402,7 +394,8 @@ First, state names and plot labels are defined.
        "$h_3$ [cm]",
    ]
 
-Labels describing the configuration of each test case are then generated.
+Labels describing the initial condition and pump inputs of each test case
+are then generated.
 
 .. code-block:: python
 
@@ -420,8 +413,8 @@ Labels describing the configuration of each test case are then generated.
            f"$q_2$={q[1]:.0f} cm³/s"
        )
 
-The initial conditions and pump inputs are collected for reference
-integration.
+The initial conditions and pump inputs are collected for numerical
+reference integration.
 
 .. code-block:: python
 
@@ -435,8 +428,8 @@ integration.
        for tc in TEST_CASES
    ]
 
-The three operator results are compared with SciPy ``solve_ivp`` using
-``adalib.utils.plot_operator_result``.
+The three operator predictions are compared with SciPy ``solve_ivp``
+using ``adalib.utils.plot_operator_result``.
 
 .. code-block:: python
 
@@ -457,8 +450,8 @@ The three operator results are compared with SciPy ``solve_ivp`` using
        show=False,
    )
 
-The relative :math:`L_2` errors are evaluated for each state and each
-test configuration.
+The relative :math:`L_2` error is evaluated for each state and each test
+configuration as
 
 .. math::
 
@@ -487,8 +480,7 @@ The errors can be printed using
            f"Case {i+1}: "
            + ", ".join(
                f"{n}={v:.2e}"
-               for n, v
-               in zip(state_names, row)
+               for n, v in zip(state_names, row)
            )
        )
 
@@ -504,38 +496,40 @@ reference solutions is shown below.
 Training and Inference Summary
 ------------------------------
 
-The complete operator-learning workflow can be summarized as
+The complete operator-learning workflow can be summarized as follows.
 
 .. code-block:: text
 
    First execution
-   ───────────────
 
-   get_system("triple_tank")
-          ↓
-   Generate training configurations
-          ↓
-   Train LPA Operator
-          ↓
+   Triple-Tank system
+          |
+          v
+   Generate training data
+          |
+          v
+   Train LPA operator
+          |
+          v
    Save checkpoint
-          ↓
-   OperatorResult
 
 
    Subsequent executions
-   ─────────────────────
 
    New initial condition / pump inputs
-          ↓
-   Load existing checkpoint
-          ↓
+          |
+          v
+   Load trained checkpoint
+          |
+          v
    Operator inference
-          ↓
+          |
+          v
    OperatorResult
 
 The computationally expensive training stage is performed only once.
-The trained operator can then be reused for different initial conditions
-and pump-input configurations without retraining.
+The trained operator can subsequently be reused for different initial
+conditions and pump-input configurations without retraining.
 
 
 Complete Source Code
@@ -546,4 +540,3 @@ The complete runnable example is available below.
 .. literalinclude:: ../../tests/test_adalib_operator_triple_tank.py
    :language: python
    :linenos:
-```
