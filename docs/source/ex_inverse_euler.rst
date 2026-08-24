@@ -1,4 +1,4 @@
-Euler Rigid-Body Inverse Problem
+Euler Rigid-Body Inverse Problem 
 ================================
 
 Problem Setup
