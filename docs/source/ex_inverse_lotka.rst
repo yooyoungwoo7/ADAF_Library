@@ -1,4 +1,4 @@
-Lotka–Volterra Inverse Problem
+Lotka–Volterra Inverse Problem 
 ==============================
 
 Problem Setup
