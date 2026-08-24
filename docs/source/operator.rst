@@ -1,25 +1,12 @@
-Operator Learning Examples
-==========================
+# Operator Learning Examples
 
-These examples demonstrate ADA-based operator learning for
-parametric ODE systems.
+This tutorial demonstrates the ADA-based operator-learning workflow using
+the Triple-Tank system as an example.
 
-Lotka-Volterra System
----------------------
+The same workflow can also be applied to other parametric ODE systems,
+such as the CSTR and Fed-Batch Bioreactor, by changing the system
+definition and the corresponding system-specific configurations.
 
-* :doc:`Lotka-Volterra Operator Learning <operator_lotka>`
+## Triple-Tank System
 
-CSTR System
------------
-
-* :doc:`CSTR Operator Learning <operator_cstr>`
-
-Triple-Tank System
-------------------
-
-* :doc:`Triple-Tank Operator Learning <operator_triple_tank>`
-
-Fed-Batch Bioreactor
---------------------
-
-* :doc:`Fed-Batch Bioreactor Operator Learning <operator_bioreactor>`
+* :doc:`Triple-Tank Operator Learning <ex_triple_tank>`
