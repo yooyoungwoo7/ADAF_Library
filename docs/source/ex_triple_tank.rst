@@ -1,91 +1,94 @@
-# Triple-Tank Operator Learning
+Triple-Tank Operator Learning
+=============================
 
-## Overview
+Overview
+--------
 
 This tutorial demonstrates the ADA-based operator-learning workflow using
 the Triple-Tank system as an example.
 
-Although only the Triple-Tank problem is presented here, the same
-operator-learning workflow can be applied to other parametric ODE systems,
-such as the CSTR and Fed-Batch Bioreactor, by changing the system
-definition and the corresponding system-specific configurations.
+Although only the Triple-Tank problem is presented in this tutorial, the
+same operator-learning workflow can also be applied to other parametric
+ODE systems, such as the CSTR and Fed-Batch Bioreactor. In such cases,
+the system definition and the corresponding system-specific initial
+conditions, inputs, and configurations should be changed accordingly.
 
-For the Triple-Tank benchmark, the system object is constructed as
+For the Triple-Tank benchmark, the system is loaded using
 
 .. code-block:: python
 
-system = adalib.get_system("triple_tank")
+   system = adalib.get_system("triple_tank")
 
-Other built-in systems can be selected through the same interface by
-changing the registered system name.
 
-## Problem Setup
+Problem Setup
+-------------
 
-The Triple-Tank benchmark consists of three interconnected cylindrical
-tanks.
+The Triple-Tank benchmark consists of three interconnected tanks.
 
 The state variables are
 
 .. math::
 
-# \mathbf{x}
-
-\begin{bmatrix}
-h_1 & h_2 & h_3
-\end{bmatrix}^{T},
+   \mathbf{x}
+   =
+   \begin{bmatrix}
+   h_1 & h_2 & h_3
+   \end{bmatrix}^{T},
 
 where
 
-* :math:`h_1`: liquid level of Tank 1,
-* :math:`h_2`: liquid level of Tank 2,
-* :math:`h_3`: liquid level of Tank 3.
+- :math:`h_1`: liquid level of Tank 1,
+- :math:`h_2`: liquid level of Tank 2,
+- :math:`h_3`: liquid level of Tank 3.
 
 The external pump inputs are
 
 .. math::
 
-# \mathbf{q}
-
-\begin{bmatrix}
-q_1 & q_2
-\end{bmatrix}^{T},
+   \mathbf{q}
+   =
+   \begin{bmatrix}
+   q_1 & q_2
+   \end{bmatrix}^{T},
 
 where :math:`q_1` and :math:`q_2` denote the pump flow rates supplied to
-Tanks 1 and 2, respectively.
+Tanks 1 and 2.
 
-The dynamics summarized in the benchmark implementation are
-
-.. math::
-
-# \frac{dh_1}{dt}
-
-\frac{q_1-q_{13}}{A},
+The system dynamics are represented as
 
 .. math::
 
-# \frac{dh_2}{dt}
-
-\frac{q_2-q_{32}}{A},
+   \frac{dh_1}{dt}
+   =
+   \frac{q_1-q_{13}}{A},
 
 .. math::
 
-# \frac{dh_3}{dt}
+   \frac{dh_2}{dt}
+   =
+   \frac{q_2-q_{32}}{A},
 
-\frac{q_{13}+q_{32}-q_{30}}{A},
+.. math::
+
+   \frac{dh_3}{dt}
+   =
+   \frac{q_{13}+q_{32}-q_{30}}{A},
 
 where :math:`q_{13}`, :math:`q_{32}`, and :math:`q_{30}` represent
 gravity-driven flows between the tanks and through the outlet.
 
-## Operator-Learning Workflow
+
+Operator-Learning Workflow
+--------------------------
 
 Unlike the forward solver, which solves one specific ODE configuration,
 operator learning trains a reusable model that can predict the ADA
 representation for different system configurations.
 
-The workflow consists of the following steps:
+The overall workflow consists of the following steps:
 
 1. Select the target ODE system.
-2. Configure `OperatorOptions`.
+2. Configure ``OperatorOptions``.
 3. Generate the operator-training dataset.
 4. Train the operator network.
 5. Perform inference for a target configuration.
@@ -93,29 +96,36 @@ The workflow consists of the following steps:
 7. Evaluate new initial conditions and system inputs.
 8. Compare the operator predictions with numerical reference solutions.
 
-The overall workflow can be summarized as
+The workflow can be summarized as
 
 .. code-block:: text
 
-ODE System
-↓
-OperatorOptions
-↓
-Training Data Generation
-↓
-Operator Training
-↓
-Trained Checkpoint
-↓
-New Initial Condition / Input
-↓
-run_operator
-↓
-OperatorResult
+   ODE System
+       |
+       v
+   OperatorOptions
+       |
+       v
+   Training Data Generation
+       |
+       v
+   Operator Training
+       |
+       v
+   Trained Checkpoint
+       |
+       v
+   New Initial Condition / Input
+       |
+       v
+   run_operator
+       |
+       v
+   OperatorResult
+
 
 1. Import Libraries
-
-```
+~~~~~~~~~~~~~~~~~~~
 
 First, import NumPy, Matplotlib, and ADALib.
 
@@ -129,24 +139,28 @@ First, import NumPy, Matplotlib, and ADALib.
    adalib.utils.set_adalib_plot_style(style="serif")
 
 The Matplotlib ``Agg`` backend is used because the generated figures are
-saved directly to files.
+saved directly to files instead of being displayed interactively.
 
 
 2. Load the Triple-Tank System
-```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The Triple-Tank benchmark is provided as a built-in ADALib system.
 
 .. code-block:: python
 
-system = adalib.get_system("triple_tank")
+   system = adalib.get_system("triple_tank")
 
-The resulting system object contains the governing equations and
-system-specific configuration required by the operator-learning workflow.
+The resulting system object contains the governing equations required by
+the operator-learning workflow.
+
+For other built-in benchmark systems, the same interface can be used by
+changing the registered system name and supplying the corresponding
+system-specific configuration.
+
 
 3. Configure Operator Training
-
-```
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The operator-learning procedure is configured through
 ``adalib.OperatorOptions``.
@@ -185,17 +199,17 @@ The principal settings are:
 - ``n_train``: number of training configurations.
 - ``n_val``: number of validation configurations.
 - ``seed``: random seed used during dataset generation.
-- ``generate_data``: enables generation of a new operator-training dataset.
+- ``generate_data``: enables generation of a new training dataset.
 - ``reuse_existing_data``: determines whether an existing dataset is reused.
 - ``train``: enables operator-network training.
 - ``reuse_existing_checkpoint``: determines whether a previously trained model is loaded.
 - ``epochs``: number of training epochs.
-- ``batch_size``: number of configurations processed per training batch.
+- ``batch_size``: number of configurations processed in each training batch.
 - ``lr``: learning rate.
 - ``hidden``: width of the hidden layers.
 - ``n_layers``: number of hidden layers.
-- ``infer``: enables inference after training.
-- ``work_dir``: directory used to store generated data, checkpoints, and training results.
+- ``infer``: enables operator inference after training.
+- ``work_dir``: directory used to store generated data, checkpoints, and results.
 
 In this example, the LPA basis is used for the ADA representation.
 
@@ -203,8 +217,8 @@ In this example, the LPA basis is used for the ADA representation.
 4. Train the Operator
 ~~~~~~~~~~~~~~~~~~~~~
 
-The first call to ``adalib.run_operator`` performs data generation,
-operator training, and inference.
+The first call to ``adalib.run_operator`` performs the complete
+data-generation, training, and inference workflow.
 
 .. code-block:: python
 
@@ -232,15 +246,15 @@ and the corresponding pump inputs are
    =
    [100,\ 150].
 
-The returned ``OperatorResult`` contains the predicted trajectory for
-this configuration.
+The returned ``OperatorResult`` contains the predicted state trajectory
+for the supplied configuration.
 
 
 5. Inspect the OperatorResult
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The predicted time coordinates and state trajectories can be accessed
-directly from the result object.
+The predicted time coordinates and state trajectories are directly
+available from the returned result object.
 
 .. code-block:: python
 
@@ -261,16 +275,16 @@ For the Triple-Tank system,
 
 .. code-block:: text
 
-   result.y[0] → h1
-   result.y[1] → h2
-   result.y[2] → h3
+   result.y[0] -> h1
+   result.y[1] -> h2
+   result.y[2] -> h3
 
 
 6. Reuse the Trained Operator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Once the operator has been trained, the data-generation and training
-stages do not need to be repeated for new system configurations.
+Once the operator has been trained, data generation and training do not
+need to be repeated for new system configurations.
 
 An inference-only option object is therefore defined as
 
@@ -288,7 +302,7 @@ An inference-only option object is therefore defined as
        verbose=False,
    )
 
-The important settings are
+The important differences from the training configuration are
 
 .. code-block:: text
 
@@ -296,7 +310,7 @@ The important settings are
    train = False
    reuse_existing_checkpoint = True
 
-The previously trained model stored in
+The trained operator stored in
 
 .. code-block:: text
 
@@ -311,8 +325,8 @@ key feature of the operator-learning workflow.
 7. Define Test Cases
 ~~~~~~~~~~~~~~~~~~~~
 
-Three different combinations of initial tank levels and pump inputs are
-used to evaluate the trained operator.
+Three combinations of initial tank levels and pump inputs are used to
+evaluate the trained operator.
 
 .. code-block:: python
 
@@ -331,7 +345,7 @@ used to evaluate the trained operator.
        },
    ]
 
-Each case contains
+Each test case contains
 
 - ``x0``: the three initial tank levels,
 - ``params``: the two pump-flow inputs.
@@ -340,10 +354,11 @@ Each case contains
 8. Run Inference for New Configurations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The first result has already been obtained during the training call.
+The first test case has already been evaluated during the initial
+training call.
 
 The remaining cases are evaluated using the trained checkpoint without
-additional training.
+additional operator training.
 
 .. code-block:: python
 
@@ -360,16 +375,19 @@ additional training.
 
        all_results.append(r)
 
-The same trained operator is therefore reused for multiple system
-configurations without repeating the training stage.
+The same trained operator is therefore reused for multiple configurations.
 
 .. code-block:: text
 
    Trained Operator
           |
           +-- Case 1 --> OperatorResult
+          |
           +-- Case 2 --> OperatorResult
+          |
           +-- Case 3 --> OperatorResult
+
+No additional training is required for Cases 2 and 3.
 
 
 9. Multi-Case Numerical Comparison
@@ -378,7 +396,7 @@ configurations without repeating the training stage.
 The operator predictions are compared with numerical reference
 trajectories for all three test cases.
 
-First, the state names and plot labels are defined.
+First, the state names and corresponding plot labels are defined.
 
 .. code-block:: python
 
@@ -394,8 +412,8 @@ First, the state names and plot labels are defined.
        "$h_3$ [cm]",
    ]
 
-Labels describing the initial condition and pump inputs of each test case
-are then generated.
+Labels describing the initial conditions and pump inputs of the
+individual test cases are then generated.
 
 .. code-block:: python
 
@@ -413,8 +431,8 @@ are then generated.
            f"$q_2$={q[1]:.0f} cm³/s"
        )
 
-The initial conditions and pump inputs are collected for numerical
-reference integration.
+The initial conditions and pump inputs are collected into lists for the
+numerical reference calculation.
 
 .. code-block:: python
 
@@ -450,8 +468,8 @@ using ``adalib.utils.plot_operator_result``.
        show=False,
    )
 
-The relative :math:`L_2` error is evaluated for each state and each test
-configuration as
+The relative :math:`L_2` error is evaluated independently for each state
+and each test configuration.
 
 .. math::
 
@@ -500,34 +518,37 @@ The complete operator-learning workflow can be summarized as follows.
 
 .. code-block:: text
 
-   First execution
+   First Execution
+   ---------------
 
-   Triple-Tank system
+   Triple-Tank System
           |
           v
-   Generate training data
+   Generate Training Data
           |
           v
-   Train LPA operator
+   Train LPA Operator
           |
           v
-   Save checkpoint
+   Save Checkpoint
 
 
-   Subsequent executions
+   Subsequent Executions
+   ---------------------
 
-   New initial condition / pump inputs
+   New Initial Condition / Pump Inputs
           |
           v
-   Load trained checkpoint
+   Load Existing Checkpoint
           |
           v
-   Operator inference
+   Operator Inference
           |
           v
    OperatorResult
 
 The computationally expensive training stage is performed only once.
+
 The trained operator can subsequently be reused for different initial
 conditions and pump-input configurations without retraining.
 
@@ -535,7 +556,11 @@ conditions and pump-input configurations without retraining.
 Complete Source Code
 --------------------
 
-The complete runnable example is available below.
+The tutorial above focuses on the multi-case numerical comparison to
+avoid redundant visualization.
+
+The complete runnable test module also contains additional helper
+visualizations for single-case comparison and inference validation.
 
 .. literalinclude:: ../../tests/test_adalib_operator_triple_tank.py
    :language: python
