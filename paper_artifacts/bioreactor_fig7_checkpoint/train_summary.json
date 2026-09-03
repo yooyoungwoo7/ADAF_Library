@@ -1,0 +1,10 @@
+{
+  "problem": "bioreactor",
+  "run_dir": "results/bioreactor/bioreactor_20260427_222342",
+  "epochs": 2000,
+  "batch_size": 128,
+  "peak_lr": 0.003,
+  "min_lr": 5e-05,
+  "best_checkpoint": "results/bioreactor/bioreactor_20260427_222342/checkpoints/epoch_01997_best.weights.h5",
+  "best_val_phys_loss": 2.6715114248832557e-05
+}

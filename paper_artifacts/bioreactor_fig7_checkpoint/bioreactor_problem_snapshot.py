@@ -53,26 +53,22 @@ class BioreactorProblem(BaseProblem):
     #   growth_S₀ = −μ₀ Xs₀/Yx − V_PAR Xs₀/Y_P + D₀(Sin − Ss₀)
     #   inhib₀ = Ss₀ / K_I                          (Haldane inhibition severity)
     #   Vs_end_est = Vs₀ + inp · DT_SEG             (volume at segment end)
-    # Stats recomputed for Sin~(0.3,1.5) g/L and Ss0~(0,1.0) g/L.
     n_derived_features = 6
-    derived_mean = np.array([0.010, 0.050, -0.080, -0.020, 0.050, 2.96], dtype=NP_DTYPE)
-    derived_std  = np.array([0.005, 0.050,  0.100,  0.070, 0.030, 1.30], dtype=NP_DTYPE)
+    derived_mean = np.array([0.010, 0.060, -0.080, 11.0, 0.50, 2.90], dtype=NP_DTYPE)
+    derived_std  = np.array([0.005, 0.060,  0.120, 12.0, 0.30, 1.35], dtype=NP_DTYPE)
 
-    # Per-state output scaling on W. Per the library-wide convention
-    # (see CLAUDE.md/WORKFLOW.md: "output_scale = RES_SCALE cancels the
-    # per-state weighting"), this must equal RES_SCALE below exactly.
-    # Restored to match RES_SCALE=(0.033, 3.4, 0.025, 0.1) after finding
-    # (2026-09-03, via an archived pre-rescale training snapshot) that the
-    # substrate component had drifted to 0.033 — a stale value from before
-    # the SIN_RANGE/SS0_RANGE rescale, not an intentional choice: RES_SCALE
-    # itself was never rescaled to match, so the two had silently diverged.
+    # Per-state output scaling on W: bioreactor RES_SCALE = (0.033, 3.4, 0.025,
+    # 0.1) spans ~136× (Ss is much faster than the others). Without this, the
+    # ∂Loss/∂W ratio between Ps and Ss states is ~18,000×, which forces the
+    # network to learn dramatically different W magnitudes per state. Setting
+    # output_scale = RES_SCALE cancels this imbalance.
     output_scale = np.array([0.033, 3.4, 0.025, 0.1], dtype=NP_DTYPE)
 
     YX_RANGE  = (0.3, 0.5)
-    SIN_RANGE = (0.3, 1.5)
+    SIN_RANGE = (180.0, 220.0)
     INP_RANGE = (0.005, 0.2)
     XS0_RANGE = (0.1, 3.7)
-    SS0_RANGE = (0.0, 1.0)
+    SS0_RANGE = (0.0, 5.0)
     PS0_RANGE = (0.0, 3.0)
     VS0_RANGE = (0.5, 5.0)
 
@@ -145,7 +141,7 @@ class BioreactorProblem(BaseProblem):
 
     # ---------------------------------------------------------------
     def nominal_input(self):
-        return np.array([1.0, 0.3, 0.0, 1.0, 0.4, 0.8, 0.05], dtype=NP_DTYPE)
+        return np.array([1.0, 0.5, 0.0, 2.0, 0.4, 200.0, 0.05], dtype=NP_DTYPE)
 
     def sweep_specs(self):
         return [
@@ -169,16 +165,18 @@ class BioreactorProblem(BaseProblem):
     # (2) sit within the training distribution so the operator predicts well.
     # All parameters kept clear of the IC/θ range boundaries.
     _ARCHETYPES = [
-        # Growth:      low Xs₀ near optimal Ss₀=√(K_M·K_I)≈0.5, slow feed
-        dict(Xs0=0.5,  Ss0=0.35, Ps0=0.0, Vs0=1.0, Yx=0.45, Sin=0.8,  inp=0.030, tag="growth"),
-        # High-biomass: mid-high Xs₀, gentle decline + product accumulation
-        dict(Xs0=3.0,  Ss0=0.20, Ps0=0.5, Vs0=2.0, Yx=0.45, Sin=1.0,  inp=0.015, tag="high-prod"),
-        # Washout:     high dilution → Xs crashes (clear washout shape)
-        dict(Xs0=2.0,  Ss0=0.50, Ps0=0.5, Vs0=1.5, Yx=0.35, Sin=0.6,  inp=0.120, tag="washout"),
-        # Substrate-limited: low Ss₀ → feeding drives growth
-        dict(Xs0=1.0,  Ss0=0.05, Ps0=0.3, Vs0=2.5, Yx=0.40, Sin=1.2,  inp=0.050, tag="sub-lim"),
+        # Visible growth:    low Xs₀, optimal Ss₀, slow feed → Xs rises ~1.3×
+        # (no boundary params; previous version had Ss₀=0, inp=0.005, Yx=0.50
+        # which were all at the edges of training distribution)
+        dict(Xs0=0.4,  Ss0=0.5, Ps0=0.2, Vs0=4.0, Yx=0.45, Sin=195.0, inp=0.010, tag="growth"),
+        # High-biomass:      mid-high Xs₀, gentle decline + product accumulation
+        dict(Xs0=3.0,  Ss0=1.0, Ps0=0.5, Vs0=2.0, Yx=0.45, Sin=200.0, inp=0.015, tag="high-prod"),
+        # Dramatic decline:  Xs crashes from 2.5 → 0.4 (clear washout shape)
+        dict(Xs0=2.5,  Ss0=2.5, Ps0=0.5, Vs0=1.5, Yx=0.35, Sin=200.0, inp=0.080, tag="washout"),
+        # Slow inhibited:    moderate Ss₀ + moderate feed → mid-tier decline
+        dict(Xs0=1.0,  Ss0=3.0, Ps0=0.3, Vs0=2.5, Yx=0.40, Sin=200.0, inp=0.040, tag="inhib"),
     ]
-    _ARCHETYPE_JITTER_SCALE = np.array([0.15, 0.05, 0.10, 0.20, 0.02, 0.10, 0.002], dtype=NP_DTYPE)
+    _ARCHETYPE_JITTER_SCALE = np.array([0.15, 0.10, 0.10, 0.20, 0.02, 4.0, 0.002], dtype=NP_DTYPE)
 
     def diverse_random_inputs(self, n_cases, rng):
         """Return n_cases archetype-cycled fed-batch inputs (jitter on top)."""
@@ -200,54 +198,4 @@ class BioreactorProblem(BaseProblem):
                            self.VS0_RANGE[1], self.YX_RANGE[1],  self.SIN_RANGE[1],
                            self.INP_RANGE[1]], dtype=NP_DTYPE)
             out.append(np.clip(x_in, lo, hi).astype(NP_DTYPE))
-        return out
-
-    # ---------------------------------------------------------------
-    # Legacy severe-inhibition archetypes reproducing the ADA_paper.tex
-    # Figure 7 operator-benchmark panels (Section 4.3.4). These predate
-    # the SIN_RANGE/SS0_RANGE rescale used everywhere else in this file:
-    # S_in here is ~130-200x the current SIN_RANGE=(0.3, 1.5) used for
-    # training and for the economic-MPC substrate-limited regime of
-    # Section 5.2 (see ADA_paper.tex's explanatory note under Fig. 7).
-    # Values below are read directly off the published Figure 7 panel
-    # annotations (X_s0, S_s0, Y_x, S_in, inp, V_s0) — these six fields
-    # match the figure exactly, with no jitter/clipping applied (unlike
-    # diverse_random_inputs above). P_s0 is NOT shown in the figure and
-    # is assumed 0.0 here — unverified. This function reconstructs only
-    # the *input* vector; it is not linked to any trained checkpoint, so
-    # plotting it through a currently-trained operator does NOT
-    # reproduce Figure 7's plotted trajectories (the original
-    # severe-regime training run/checkpoint could not be recovered —
-    # see ADA_paper.tex Section 4.3.4 and .ai/revision_log.md, "M1").
-    # This set is NOT used by default anywhere in the library or in
-    # training/sampling — it exists only to make the *inputs* behind
-    # Figure 7 inspectable/reusable, e.g.:
-    #   from utils.sweep_plots import _plot_case_grid
-    #   x_inputs = problem.diverse_random_inputs_fig7_legacy()
-    #   _plot_case_grid(x_inputs, learner, "figure7_reproduction.png",
-    #                   suptitle="bioreactor — Figure 7 reproduction")
-    #   # ^ uses whatever checkpoint `learner` holds, NOT the original one
-    # ---------------------------------------------------------------
-    _ARCHETYPES_FIG7_SEVERE_INHIBITION = [
-        dict(Xs0=0.44, Ss0=0.45, Ps0=0.0, Vs0=3.81, Yx=0.463, Sin=198.3, inp=0.010, tag="visible-growth"),
-        dict(Xs0=2.57, Ss0=2.51, Ps0=0.0, Vs0=1.63, Yx=0.330, Sin=202.9, inp=0.078, tag="washout"),
-        dict(Xs0=1.07, Ss0=2.94, Ps0=0.0, Vs0=2.52, Yx=0.392, Sin=199.4, inp=0.038, tag="haldane-inhibition"),
-        dict(Xs0=0.69, Ss0=2.53, Ps0=0.0, Vs0=3.05, Yx=0.395, Sin=196.0, inp=0.017, tag="slow-inhibited"),
-    ]
-
-    def diverse_random_inputs_fig7_legacy(self, n_cases=4):
-        """Partial input reconstruction of the paper's Figure 7 archetypes:
-        exact for 6 of 7 fields (P_s0 is assumed 0.0, unverified), and not
-        linked to the original training checkpoint. See the
-        _ARCHETYPES_FIG7_SEVERE_INHIBITION comment above for provenance
-        and caveats."""
-        out = []
-        for i in range(int(n_cases)):
-            arch = self._ARCHETYPES_FIG7_SEVERE_INHIBITION[
-                i % len(self._ARCHETYPES_FIG7_SEVERE_INHIBITION)]
-            out.append(np.array(
-                [arch["Xs0"], arch["Ss0"], arch["Ps0"], arch["Vs0"],
-                 arch["Yx"],  arch["Sin"], arch["inp"]],
-                dtype=NP_DTYPE,
-            ))
         return out

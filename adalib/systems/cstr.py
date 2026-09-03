@@ -1,7 +1,11 @@
 """
 adalib/systems/cstr.py
 CSTR with Arrhenius kinetics and heat balance.
-Wraps the existing CstrMpcProblem from the operator/MPC package.
+Uses the same governing equations and constants as the legacy
+CstrMpcProblem (operator/MPC package); matches that problem exactly at
+its fixed operating point (alpha=beta=1, F=50), and generalizes
+alpha/beta/F to user-supplied parameters, which CstrMpcProblem does
+not expose.
 """
 from __future__ import annotations
 import numpy as np
@@ -26,7 +30,9 @@ class CSTR(ODESystem):
     control_bounds = {"Q_dot": (-8500.0, 0.0)}
     parameter_bounds = {"alpha": (1.0, 1.0), "beta": (1.0, 1.0), "F": (50.0, 50.0)}
 
-    # CSTR constants (from do-mpc benchmark)
+    # CSTR constants (from do-mpc benchmark, matching
+    # adalib/_vendor/legacy/operator_mpc_original/cstr_mpc_op/problems/
+    # cstr_mpc_problem.py exactly — this class wraps that problem)
     K0_AB = 1.287e12
     K0_BC = 1.287e12
     K0_AD = 9.043e9
@@ -36,13 +42,14 @@ class CSTR(ODESystem):
     H_AB = 4.2
     H_BC = -11.0
     H_AD = -41.85
-    MU    = 934.2
+    RHO   = 0.9342
     CP    = 3.01
     CPK   = 2.0
     A     = 0.215
-    V_R   = 10.0
+    V_R   = 10.01
     MK    = 5.0
     T_IN  = 130.0
+    C_A0_FEED = (5.7 + 4.5) / 2.0
     K_W   = 4032.0
 
     def rhs(self, t, x, u=None, p=None):
@@ -50,21 +57,20 @@ class CSTR(ODESystem):
         Q_dot = float(u) if u is not None else -5000.0
         alpha  = float(p[0]) if p is not None else 1.0
         beta   = float(p[1]) if p is not None else 1.0
-        F      = float(p[2]) if p is not None else 50.0  # L/h
+        F      = float(p[2]) if p is not None else 50.0  # dilution rate, 1/h
 
         import math
-        k1 = alpha * self.K0_AB * math.exp(-self.EA_R_AB / T_R)
-        k2 = alpha * self.K0_BC * math.exp(-self.EA_R_BC / T_R)
-        k3 = beta  * self.K0_AD * math.exp(-self.EA_R_AD / T_R)
+        Tc = T_R + 273.15
+        k1 = beta  * self.K0_AB * math.exp(-self.EA_R_AB / Tc)
+        k2 =         self.K0_BC * math.exp(-self.EA_R_BC / Tc)
+        k3 =         self.K0_AD * math.exp(-alpha * self.EA_R_AD / Tc)
 
-        D = F / self.V_R  # dilution rate 1/h
-
-        dC_A = D * (self.T_IN - C_A) - k1 * C_A - k3 * C_A**2
-        dC_B = -D * C_B + k1 * C_A - k2 * C_B
-        dT_R = ((self.K_W * self.A * (T_K - T_R)
-                 - self.MU * self.CP * D * (T_R - self.T_IN)
-                 + (-k1*C_A*self.H_AB - k2*C_B*self.H_BC - k3*C_A**2*self.H_AD))
-                / (self.MU * self.CP * self.V_R))
+        dC_A = F * (self.C_A0_FEED - C_A) - k1 * C_A - k3 * C_A**2
+        dC_B = -F * C_B + k1 * C_A - k2 * C_B
+        rh = k1 * C_A * self.H_AB + k2 * C_B * self.H_BC + k3 * C_A**2 * self.H_AD
+        dT_R = (rh / (-self.RHO * self.CP)
+                + F * (self.T_IN - T_R)
+                + (self.K_W * self.A * (T_K - T_R)) / (self.RHO * self.CP * self.V_R))
         dT_K = (Q_dot + self.K_W * self.A * (T_R - T_K)) / (self.MK * self.CPK)
         return np.array([dC_A, dC_B, dT_R, dT_K])
 
@@ -84,20 +90,21 @@ class CSTR(ODESystem):
         EA_AD  = tf.cast(self.EA_R_AD, dtype)
         H_AB   = tf.cast(self.H_AB,  dtype); H_BC = tf.cast(self.H_BC, dtype)
         H_AD   = tf.cast(self.H_AD,  dtype)
-        MU     = tf.cast(self.MU,    dtype); CP  = tf.cast(self.CP,  dtype)
+        RHO    = tf.cast(self.RHO,   dtype); CP  = tf.cast(self.CP,  dtype)
         CPK    = tf.cast(self.CPK,   dtype); A   = tf.cast(self.A,   dtype)
         V_R    = tf.cast(self.V_R,   dtype); MK  = tf.cast(self.MK,  dtype)
         T_IN   = tf.cast(self.T_IN,  dtype); K_W = tf.cast(self.K_W, dtype)
-        k1 = alpha * K0_AB * tf.exp(-EA_AB / T_R)
-        k2 = alpha * K0_BC * tf.exp(-EA_BC / T_R)
-        k3 = beta  * K0_AD * tf.exp(-EA_AD / T_R)
-        D  = F / V_R
-        dC_A = D * (T_IN - C_A) - k1 * C_A - k3 * C_A ** 2
-        dC_B = -D * C_B + k1 * C_A - k2 * C_B
-        dT_R = ((K_W * A * (T_K - T_R)
-                 - MU * CP * D * (T_R - T_IN)
-                 + (-k1 * C_A * H_AB - k2 * C_B * H_BC - k3 * C_A ** 2 * H_AD))
-                / (MU * CP * V_R))
+        C_A0_FEED = tf.cast(self.C_A0_FEED, dtype)
+        Tc = T_R + tf.constant(273.15, dtype=dtype)
+        k1 = beta  * K0_AB * tf.exp(-EA_AB / Tc)
+        k2 =         K0_BC * tf.exp(-EA_BC / Tc)
+        k3 =         K0_AD * tf.exp(-alpha * EA_AD / Tc)
+        dC_A = F * (C_A0_FEED - C_A) - k1 * C_A - k3 * C_A ** 2
+        dC_B = -F * C_B + k1 * C_A - k2 * C_B
+        rh = k1 * C_A * H_AB + k2 * C_B * H_BC + k3 * C_A ** 2 * H_AD
+        dT_R = (rh / (-RHO * CP)
+                + F * (T_IN - T_R)
+                + (K_W * A * (T_K - T_R)) / (RHO * CP * V_R))
         dT_K = (Q_dot + K_W * A * (T_R - T_K)) / (MK * CPK)
         rhs  = [dC_A, dC_B, dT_R, dT_K]
         return var_list[i][1] - rhs[i]

@@ -32,6 +32,13 @@ checkpoints/
 # Local archives
 *.zip
 
+# Exception: paper reproducibility artifacts (checkpoint/config/data
+# needed to regenerate ADA_paper.tex Figure 7 from its original
+# training run — see paper_artifacts/*/README.md). Un-ignore this
+# directory despite the blanket rules above.
+!paper_artifacts/
+!paper_artifacts/**
+
 # IDE
 .vscode/
 .idea/
