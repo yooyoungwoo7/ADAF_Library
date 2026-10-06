@@ -1,3 +1,17 @@
+"""
+examples/simple_api/03_operator_example.py
+ADALib — Feature 2: Operator learning (CSTR, 4-state).
+
+Demonstrates run_operator() on the built-in CSTR system: data generation →
+training → rollout.  Compares operator predictions against a scipy BDF
+reference using the correct Arrhenius formula (with Kelvin conversion).
+
+Install once:
+    pip install -e .
+
+Run from examples/simple_api/:
+    python 03_operator_example.py
+"""
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -9,34 +23,30 @@ adalib.utils.set_adalib_plot_style(style="serif")
 system = adalib.get_system("cstr")
 
 # ── 2. Define options ───────────────────────────────────────────────
-# Sizes below match the paper's Appendix A, Table 15 (CSTR row) so this
-# script reproduces Table 5's accuracy; the earlier (hidden=64, n_layers=2,
-# n_train=2000) settings were a quick-start-only config and do not
-# reproduce the paper's reported error.
 options = adalib.OperatorOptions(
     basis="lpa",
 
     # Data generation
-    n_train=20000,
-    n_val=4000,
+    n_train=2000,
+    n_val=200,
     seed=42,
-    generate_data=True,
-    reuse_existing_data=False,
+    generate_data=False,
+    reuse_existing_data=True,
 
     # Training
-    train=True,
-    reuse_existing_checkpoint=False,
-    epochs=2000,
-    batch_size=256,
+    train=False,
+    reuse_existing_checkpoint=True,
+    epochs=1000,
+    batch_size=8,
     lr=3e-3,
-    hidden=192,
-    n_layers=3,
+    hidden=64,
+    n_layers=2,
 
     # Inference after training
     infer=True,
 
     # All artifacts (data, checkpoints, logs, results) go here
-    work_dir="./runs/cstr_operator_paper",
+    work_dir="./runs/simple_operator_cstr",
 
     verbose=True,
 )
@@ -68,8 +78,7 @@ print("\n=== Metadata ===")
 for k, v in result.metadata.items():
     print(f"  {k:<22}: {v}")
 
-# ── 5. Plot rollout vs scipy BDF reference (Case 1) ─────────────────
-state_names  = ["C_A",          "C_B",          "T_R",       "T_K"]
+# ── 5. Plot rollout vs scipy reference  ─────────────────────────────
 state_labels = ["$C_A$ [mol/l]","$C_B$ [mol/l]","$T_R$ [°C]","$T_K$ [°C]"]
 
 fig, axes, metrics = result.plot(
@@ -82,10 +91,11 @@ fig, axes, metrics = result.plot(
     show        = False,
 )
 print("\nPlot saved → operator_result.png")
-print("L2 rel errors (Case 1):", ", ".join(
+state_names = ["C_A", "C_B", "T_R", "T_K"]
+print("L2 rel errors:", ", ".join(
     f"{n}={v:.2e}" for n, v in zip(state_names, metrics["l2_rel"][0])))
 
-# ── 6. Multi-case inference validation ──────────────────────────────
+# ── 6. Multi-case inference validation plot ──────────────────────────
 fig2, axes2 = result.operator_infer(
     n_cases     = 4,
     state_names = state_labels,

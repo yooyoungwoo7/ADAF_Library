@@ -59,7 +59,7 @@ class BioreactorProblem(BaseProblem):
     derived_std  = np.array([0.005, 0.050,  0.100,  0.070, 0.030, 1.30], dtype=NP_DTYPE)
 
     # Per-state output scaling on W. Per the library-wide convention
-    # (see CLAUDE.md/WORKFLOW.md: "output_scale = RES_SCALE cancels the
+    # (see WORKFLOW.md: "output_scale = RES_SCALE cancels the
     # per-state weighting"), this must equal RES_SCALE below exactly.
     # Restored to match RES_SCALE=(0.033, 3.4, 0.025, 0.1) after finding
     # (2026-09-03, via an archived pre-rescale training snapshot) that the

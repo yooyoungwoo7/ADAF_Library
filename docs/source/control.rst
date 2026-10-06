@@ -1,20 +1,21 @@
-Model Predictive Control Examples
-=================================
+Model Predictive Control
+========================
 
-These examples demonstrate model predictive control using
-ADA-based surrogate models.
+ADAlib uses a trained operator as the prediction model inside a
+receding-horizon controller (``adalib.run_mpc``). Because the operator is
+differentiable and batchable, the controller can use exact
+automatic-differentiation gradients (``MPCOptions(gradient="autodiff")``) or
+sampling-based optimizers that evaluate many candidate input sequences in one
+batched call (``MPCOptions(optimizer="cem")`` or ``"mppi"``).
 
-CSTR Tracking MPC
------------------
+Runnable examples are in the repository's ``examples/mpc/`` folder:
 
-* :doc:`CSTR Tracking MPC <control_cstr>`
+* ``cstr_tracking_mpc.py`` — CSTR reactor-temperature tracking
+* ``triple_tank_tracking_mpc.py`` — triple-tank level tracking
+* ``bioreactor_economic_mpc.py`` — fed-batch bioreactor economic MPC
+* ``surrogate_mpc_showcase.py`` — finite-difference vs. autodiff gradients and
+  batched CEM on the same surrogate
 
-Triple-Tank Tracking MPC
-------------------------
-
-* :doc:`Triple-Tank Tracking MPC <control_triple_tank>`
-
-Fed-Batch Bioreactor Economic MPC
----------------------------------
-
-* :doc:`Fed-Batch Bioreactor Economic MPC <control_bioreactor>`
+and ``examples/simple_api/04_mpc_example.py`` /
+``05_generic_tracking_mpc.py`` show the minimal API for built-in and
+user-defined systems. See the project README for the full option list.

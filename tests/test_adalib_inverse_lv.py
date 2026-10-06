@@ -1,7 +1,10 @@
 import matplotlib
 matplotlib.use("Agg")
 import os
+import numpy as np
+from scipy.integrate import solve_ivp
 import adalib
+from adalib.inverse.observation import ObservationData
 
 # 출력 폴더는 이 파일 옆에 고정 (어디서 실행해도 같은 위치)
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -44,46 +47,26 @@ system = adalib.get_system("lotka_volterra",
 X0     = [100.0 / U_SCALE, 15.0 / U_SCALE]  # [0.5, 0.075]
 T_SPAN = (0.0, 1.0)
 
-# ── 2. Forward solve (generate ground truth) ──────────────────────────────
+# ── 2. Independent Radau reference (NOT ADA) — avoids the inverse crime ───
 print("=" * 60)
-print("Step 1: Forward solve")
-print("=" * 60)
-
-fwd_options = adalib.ForwardOptions(
-    basis="adaf",
-    n_seg=50,
-    N_p=5,
-    N_m=100,
-    Nt_total=2500,
-    epochs=5,
-    adam_inner=100,
-    use_lbfgs=True,
-    dtype="float64",
-    verbose=False,
-)
-
-fwd_result = adalib.run_forward(
-    system=system,
-    x0=X0,
-    t_span=T_SPAN,
-    params=[TRUE_ALPHA, TRUE_BETA, TRUE_GAMMA, TRUE_DELTA],
-    options=fwd_options,
-)
-
-print(f"  t shape : {fwd_result.t.shape}")
-print(f"  y shape : {fwd_result.y.shape}")
-
-# ── 3. Generate observations ──────────────────────────────────────────────
-print("\nStep 2: data_gen")
+print("Step 1: Independent Radau reference (avoids inverse crime)")
 print("=" * 60)
 
-obs = adalib.data_gen(
-    fwd_result,
-    n_points=500,
-    noise_std=0.0,
-    seed=42,
-    state_indices=[0, 1],
+_ref = solve_ivp(
+    lambda t, x: system.rhs(t, x, p=[TRUE_ALPHA, TRUE_BETA, TRUE_GAMMA, TRUE_DELTA]),
+    T_SPAN, X0, t_eval=np.linspace(T_SPAN[0], T_SPAN[1], 4000),
+    method="Radau", rtol=1e-11, atol=1e-12,
 )
+print(f"  Radau reference done. success={_ref.success}")
+
+# ── 3. Sample observations from the independent reference ─────────────────
+print("\nStep 2: Sample observations from the Radau reference")
+print("=" * 60)
+
+_idx = np.linspace(1, _ref.t.size - 1, 500).astype(int)
+t_obs = _ref.t[_idx]
+y_obs = _ref.y[:, _idx].T  # noise_std=0.0, so no noise added (matches prior setting)
+obs = ObservationData(t=t_obs, y=y_obs, state_indices=[0, 1])
 print(f"  {obs}")
 
 # ── 4. Inverse training ───────────────────────────────────────────────────

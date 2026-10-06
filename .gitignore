@@ -54,5 +54,6 @@ Thumbs.db
 *.ipynb
 
 # Test / coverage
+tests/lv_inverse_outputs/
 .coverage
 htmlcov/

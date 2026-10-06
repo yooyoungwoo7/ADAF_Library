@@ -8,12 +8,12 @@ sys.path.insert(0, os.path.abspath("../.."))
 
 # -- Project information
 
-project = 'ADA Library'
-copyright = '2021, Graziella'
-author = 'Graziella'
+project = 'ADAlib'
+copyright = '2026, Youngwoo Yoo, Dayeong Kang, Suhyeong Lim, Sang-Hyun Rhie, Jeongsu Lee'
+author = 'Youngwoo Yoo, Dayeong Kang, Suhyeong Lim, Sang-Hyun Rhie, Jeongsu Lee'
 
-release = '0.1'
-version = '0.1.0'
+release = '0.1.0'
+version = '0.1'
 
 # -- General configuration
 
@@ -26,7 +26,6 @@ extensions = [
 ]
 
 autosummary_generate = True
-autodoc_mock_imports = ["tensorflow", "torch", "jax", "deepxde", "scipy", "numpy"]
 autodoc_member_order = "bysource"
 
 autodoc_mock_imports = [

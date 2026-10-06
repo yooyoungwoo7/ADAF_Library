@@ -6,14 +6,14 @@ Three integrated features:
   - Forward  : ForwardSolver, ForwardOptions, run_forward
                Generic CallableODESystem fully supported.
   - Operator : OperatorLearner, run_operator
-               Built-in systems only (cstr, triple_tank, fedbatch_bioreactor, …).
+               Built-in systems (cstr, triple_tank, fedbatch_bioreactor, …) and
+               user-defined CallableODESystem — the latter via a generic,
+               physics-residual-only training path (see run_operator's
+               internal _run_generic_operator dispatch).
   - MPC      : run_mpc
                Built-in systems (cstr, triple_tank, fedbatch_bioreactor) and
                user-defined CallableODESystem — uses ADA LPA Operator NN as
                surrogate (same OperatorNet/BatchLPABasis as built-in systems).
-
-Generic Operator learning via run_operator(CallableODESystem, …) is planned
-for a future release.
 """
 __version__ = "0.1.0"
 

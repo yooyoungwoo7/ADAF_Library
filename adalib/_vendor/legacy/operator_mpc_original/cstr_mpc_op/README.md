@@ -372,4 +372,3 @@ processes where the optimal trajectory is not known a priori.
 | `README.md` | This file — quick start and overview |
 | `WORKFLOW_EN.md` | Full library workflow for all 4 bundled problems |
 | `WORKFLOW.md` | Same, in Korean |
-| `CLAUDE.md` | Developer reference — code conventions, per-problem tuning |

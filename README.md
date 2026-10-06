@@ -1,219 +1,40 @@
-# adalib-ode
+# ADAlib (`adalib-ode`)
 
-**ADA-based ODE library** — forward solving, operator learning, model predictive control, and physics-informed inverse parameter estimation.
+**ADAlib** is a Python library built on the Anti-Derivative Approximator (ADA)
+representation for ordinary differential equations. One library covers four
+tasks: forward simulation, physics-informed inverse parameter estimation,
+amortized operator learning, and model predictive control (MPC) with the
+trained operator as a differentiable, batchable surrogate.
 
----
-
-## Project status & handoff (updated 2026-07-16)
-
-> This section is a running handoff log so a new maintainer can pick the project
-> up without re-deriving the current state. The subsections below record **what
-> works, what was decided, and what was deliberately dropped.**
-
-### Inverse (parameter estimation) — scope frozen at Lotka–Volterra + Euler
-
-The inverse solver is **validated only on the Lotka–Volterra (LV) and Euler
-rigid-body systems** (low noise, full state observation). This is the intended,
-final scope for the current paper/release — see the evidence below.
-
-A robustness study (`scripts/inverse_robustness.py`, logs in
-`runs/inverse_robustness_log.txt`) and a fed-batch bioreactor identifiability
-study (`scripts/inverse_bio_robust.py`, `scripts/_bio_tune_check.py`) were run
-on 2026-07-15. Findings:
-
-| Scenario | ADA inverse | Classical NLS (Radau) baseline |
-|---|---|---|
-| LV, 0 % noise, full obs | ✅ α ≈ 0.04 %, γ ≈ 0.003 % rel-err | ✅ ~1e-11 |
-| LV, 1 % noise | ⚠️ α ≈ 1 %, **γ ≈ 32 %** | ✅ α, γ < 0.2 % |
-| LV, 3–5 % noise | ❌ γ rel-err 0.7–0.8 | ✅ < 0.7 % |
-| LV, partial obs (prey only) | ❌ γ rel-err ≈ 1.0 | mixed |
-| Fed-batch bioreactor Haldane (μ_max, K_S, K_I), **0 % noise** | ❌ rel-err 0.9–2.2 (fails) | ✅ ~1e-10 (perfect) |
-
-**Decision (2026-07-15):** stop pursuing the bioreactor Haldane inverse. The
-three Haldane kinetic constants are strongly correlated (poorly identifiable),
-and ADA's joint W+θ optimization stalls near the initial guess while classical
-NLS solves it exactly. Stronger settings (`_bio_tune_check.py`: more epochs,
-data pre-fit, alternating optimizer) did **not** help — the `strong_prefit`
-run actually got worse. The `alternating` variant was interrupted by a reboot
-and never completed; it is **not** worth re-running given the two negative
-results already in hand.
-
-**Honest takeaway for the next maintainer:** ADA inverse is competitive with
-classical NLS only for clean, fully-observed, well-conditioned problems. Under
-measurement noise, partial observation, or strong parameter correlation it is
-currently **not** competitive with NLS. Improving noise/identifiability
-robustness is the natural next work item if inverse is to be extended beyond
-LV/Euler.
-
-### What changed on 2026-07-15 (new, uncommitted work)
-
-New files added this session (not part of the original v0.1.0 snapshot):
-
-- `scripts/inverse_robustness.py` — LV noise/n_obs/partial-observation sweep vs NLS.
-- `scripts/inverse_bio_robust.py` — bioreactor Haldane identifiability study vs NLS.
-- `scripts/_bio_tune_check.py`, `scripts/_bio_gate.py`, `scripts/_fhn_gate.py`,
-  `scripts/_euler_gate.py` — fair-shot / gate diagnostic scripts.
-- `scripts/pideeponet_benchmark.py`, `scripts/operator_speed_batched.py`,
-  `scripts/tune_euler_forward.py` — operator accuracy/speed + Euler forward tuning.
-- `runs/` — all logs and `results.json` outputs from the above (kept for the
-  paper; regenerable, safe to delete).
-
-Contextual notes from the session:
-- **Euler forward tuning** (see `runs/euler_diag.txt`, `tune_euler_forward.py`):
-  ADA-F Euler accuracy is controlled by `gamma` (sharp optimum ≈ 0.9), points
-  per segment, and `n_seg` convergence.
-- **LV inverse config drift:** `tests/test_adalib_inverse_lv.py` currently uses
-  `lambda_data=1.0, training_strategy="joint", n_passes=1`. An earlier overnight
-  note (`lv_overnight_summary.md`, 2026-07-06) recommended `lambda_data=500` +
-  `alternating` for ~1 % error and warned `n_passes=2` caused drift to
-  2.57 %/4.16 %. **These two configs disagree** — reconcile before quoting a
-  single "official" LV inverse number. The paper currently reports the
-  2.58 %/4.15 % (drift) numbers; verify against a fresh run before publishing.
-
-### Paper revision log — abbreviation pass (`ADA_paper_final_before_abbreviation.tex` → `ADA_paper.tex`, 2026-07-20 → 2026-07-22)
-
-We went through `ADA_paper.tex` section by section to tighten prose and cut
-length. Below is what changed, organized by paper section. Purely cosmetic
-wording trims are omitted; only substantive changes are listed.
-
-> **Flag for review before submission:** the inverse-crime fix below (§2.3 /
-> §4.2) was applied to the writeup but **not consistently to the underlying
-> results** — see the callout under "ADA for Solving Inverse Problems." This
-> is the one item that needs a decision (rerun the Euler experiment, or walk
-> back the methodology claim) before the paper goes out.
-
-**Global**
-- Citation style switched from author–year (`natbib[authoryear]`) to numbered
-  (`natbib[numbers,sort&compress]`, `unsrtnat`).
-- 5 new citations added: `Kaipio2005`, `Hochreiter1998`, `DeepXDELVDemo`,
-  `Kingma2014`, `Zhu1997`. None removed.
-- 1 new figure added: LV operator schematic (`image14.png`, Appendix C).
-
-**1. Introduction**
-- PinnDE's backend description narrowed from "TensorFlow and JAX" to just
-  "a JAX backend" — a factual correction about a competing library.
-- PINN-limitations paragraph condensed; added `\citep{Hochreiter1998}` to
-  support the "activation functions lose effectiveness after repeated
-  differentiation" claim (previously uncited).
-- ADA description clarified: accuracy parity with baselines is qualified as
-  holding "when incorporated into PINNs," not as a standalone claim.
-- **Dropped, not relocated:** the summary sentence claiming the solver
-  "attains promising accuracy at millisecond-order batched inference,
-  providing a competitive and physically interpretable alternative to
-  PINN-based solvers" across four benchmark systems. Only the
-  TensorFlow-backend sentence survived (moved to Appendix A).
-
-**2. Methodology and Theory**
-- *2.1 Anti-Derivative Approximator:* promoted from an unlabeled
-  `\subsection*` to a proper numbered/labeled subsection; closing remark
-  about the original ADA-F paper's residual-minimization framing dropped.
-- *2.2 Feed-Forward Problems:* derivative-continuity equation for
-  higher-order systems moved out to new **Appendix B**, with an added,
-  more honest scope statement: *"none of the benchmark systems in this
-  paper require m≥2, so this generalization is not exercised."* The
-  warm-start explanation (reusing optimized panel weights as the next
-  segment's initial weights) was cut with no replacement. Added citations
-  for Adam (`Kingma2014`) and L-BFGS-B (`Zhu1997`).
-- *2.3 Inverse Problems — most significant change:* observation data
-  generation switched from **sampling ADA's own forward solution**
-  (an inverse crime) to an **independent `scipy.integrate.solve_ivp`
-  reference**, citing `Kaipio2005`.
-  > ⚠️ **Only the prose was updated, not (verifiably) the results.** The
-  > Euler rigid-body inverse still reports the identical converged values
-  > (I₂=0.2999, I₃=0.3995) as before, its relative-error sentence was
-  > deleted and replaced with a LaTeX comment: `% TODO: rerun Euler inverse
-  > experiment with an independent reference integrator ... to avoid the
-  > inverse crime, then update the converged I_2, I_3 values`. The
-  > Lotka–Volterra numbers (α=38.97, γ=22.08, errors 2.58%/4.15%) are also
-  > unchanged to the decimal despite the claimed protocol switch. Also
-  > unresolved in both old and new versions: the Conclusion states recovery
-  > was validated "across noise levels, observation densities, partial
-  > observations, and initial guesses" — Section 4.2 reports none of that
-  > sweep, in either version.
-- *2.4 Operator Learning:* the concrete Lotka–Volterra operator derivation
-  (equations + batched-input construction) moved to new **Appendix C**,
-  which gains the new LV schematic figure. Swish-activation detail and the
-  full training-loop description (Adam + cosine annealing + warm-up +
-  gradient clipping) relocated to Appendix A.
-- *2.5 Surrogate for MPC:* unchanged.
-
-**3. ADA Solver User Implementation**
-- Restructured: the old "Workflow" (7-step table) and "Extensions"
-  subsections were removed from the main body and moved verbatim into an
-  expanded **Appendix A** ("Software Workflow and User-Adjustable
-  Settings"). No information lost, just relocated — Section 3 is now two
-  short paragraphs plus a pointer to the appendix.
-
-**4. Simulation Results**
-- *4.1 Feed-Forward:* Euler/LV subsection order swapped (Euler now first).
-  Euler numbers unchanged. **LV parameterization gap fixed** — added the
-  explicit formula (α=2R, β=0.04RU, γ=1.06R, δ=0.02RU, U=200, R=20 ⇒
-  α=40.0, β=160.0, γ=21.2, δ=80.0) that was previously only vaguely
-  described, plus a new citation (`DeepXDELVDemo`).
-- *4.2 Inverse:* see the §2.3 callout above — this is where the
-  inconsistency actually surfaces in the results text.
-- *4.3 Operator Learning:* per-state-error and timing tables merged per
-  system (presentation only, no numbers changed). Triple-tank: added
-  dataset-size disclosure (20k/4k/4k train/val/test trajectories). CSTR:
-  removed explicit parameter-sampling ranges from main text (now just
-  references `\citep{Fiedler2023}`). LV: **removed** the claim of being
-  "~6× faster than cd-PINN" (`Li2025`) — no replacement. Bioreactor:
-  archetype-scenario/per-state discussion moved to new **Appendix D**;
-  **numeric correction** — the real-time speedup claim changed from
-  "~two orders of magnitude" to **"~four orders of magnitude (~32,000×)"**
-  faster than real process time (100 min), i.e. the old number looks like
-  it was simply wrong.
-
-**5. Control Application of OperatorADA**
-- 5.1 Tracking MPC, 5.2 Bioreactor Economic MPC, 5.3 Differentiable/Batched
-  Surrogate Inference: **no substantive changes** in any of the three
-  subsections — text and all numbers are identical.
-
-**6. Conclusion**
-- Unchanged, including the pre-existing overclaim about inverse validation
-  breadth noted under §2.3 above.
-
-**Appendices A–D**
-- All four are net-new or substantially expanded, built from content moved
-  out of the main body (Appendix A: workflow/settings from old §3 + backend
-  sentence from Intro + operator training details from §2.4; Appendix B:
-  higher-order derivative continuity from §2.2, with new scope disclosure;
-  Appendix C: LV operator construction from §2.4, with new figure;
-  Appendix D: bioreactor archetype/error analysis from §4.3.4). No content
-  was lost in these moves — only reorganized, with two exceptions
-  called out above (dropped Intro summary sentence, dropped cd-PINN
-  comparison).
-
-### Environment
-
-Use the conda **`tf`** env (adalib is installed editable there):
-
-```bash
-/home/jeongsulee/anaconda3/envs/tf/bin/python <script.py>
-```
-
-TensorFlow 2.21, GPU: RTX 4070 Ti. This is not a git repository — there is no
-version control safety net; back up before large edits.
+- Documentation: https://adaf-library.readthedocs.io/en/latest/
+- Source: https://github.com/yooyoungwoo7/ADAF_Library
 
 ---
 
 ## Install
 
+From GitHub (recommended):
+
 ```bash
-pip install adalib-ode
+pip install git+https://github.com/yooyoungwoo7/ADAF_Library.git
 ```
 
-or from source:
+or from a local clone:
 
 ```bash
+git clone https://github.com/yooyoungwoo7/ADAF_Library.git
+cd ADAF_Library
 pip install -e .
 ```
 
-Requires Python ≥ 3.10, TensorFlow ≥ 2.13.
+Requires Python >= 3.10 and TensorFlow >= 2.13.
 
 ```python
-import adalib   # distribution name is "adalib-ode"; import name remains "adalib"
+import adalib   # distribution name is "adalib-ode"; the import name is "adalib"
 ```
+
+> **Note:** an unrelated PyPI package called `adalib` uses the same import
+> name. Do not install both in the same environment.
 
 ---
 
@@ -227,13 +48,14 @@ import adalib   # distribution name is "adalib-ode"; import name remains "adalib
 | MPC — economic | ❌ Not yet supported | ✅ Supported |
 | Inverse (parameter estimation) | ⚠️ Works; validated on LV/Euler only | ⚠️ Validated on LV/Euler only |
 
-**Built-in systems:** `cstr`, `triple_tank`, `fedbatch_bioreactor`, `lotka_volterra`, `euler`
+**Built-in systems:** `cstr`, `triple_tank`, `fedbatch_bioreactor`,
+`lotka_volterra`, `lotka_volterra_ur`, `euler`, `damped_pendulum`
+(see [Built-in systems](#built-in-systems)).
 
-> **Inverse caveat:** the inverse solver is validated (tests + paper) only for
-> `lotka_volterra` and `euler` under low noise / full observation. Inverse for
-> `fedbatch_bioreactor` is **known to fail** (poorly identifiable Haldane
-> kinetics); inverse for `cstr` / `triple_tank` is **unverified**. See
-> *Project status & handoff* above.
+> **Inverse caveat:** the inverse solver is validated only for
+> `lotka_volterra` and `euler` under low noise and full observation. Inverse
+> estimation for `fedbatch_bioreactor` is known to fail (the Haldane kinetics
+> are poorly identifiable), and for `cstr` / `triple_tank` it is unverified.
 
 ---
 
@@ -374,15 +196,15 @@ The generic `CallableODESystem` MPC path also accepts `gradient="autodiff"`,
 using an analytic Jacobian through the pure-numpy LPA surrogate.
 `gradient=None` + `optimizer="SLSQP"` (default) keeps the original loops.
 See `examples/mpc/surrogate_mpc_showcase.py` for a head-to-head comparison
-(FD vs autodiff vs CEM + batch-throughput microbenchmark vs `solve_ivp`), and
-`scripts/benchmark_surrogate_mpc.py` for the full paper benchmark (adds a
-conventional `solve_ivp`-NMPC baseline, an $H$ sweep, and economic MPC).
+(FD vs autodiff vs CEM, plus a batch-throughput microbenchmark against
+`solve_ivp`).
 
 ### 4. Inverse — parameter estimation from observations
 
 ```python
 import adalib
 import numpy as np
+import tensorflow as tf
 
 # --- Define system with unknown parameters ---------------------------------
 def lv_rhs(t, x, u=None, p=None):
@@ -407,6 +229,9 @@ system = adalib.CallableODESystem(
 )
 
 # --- Generate synthetic observations ---------------------------------------
+# (For a fair benchmark, sample observations from an independent solver such as
+#  scipy.integrate.solve_ivp rather than from ADAlib's own forward solution;
+#  see examples/inverse/lotka_volterra_inverse.py.)
 true_p = {"alpha": 1.0, "beta": 0.1, "gamma": 1.5, "delta": 0.075}
 ref    = adalib.run_forward(system, x0=[10.0, 5.0], t_span=(0.0, 15.0),
                             params=true_p,
@@ -664,76 +489,133 @@ Runnable scripts are in [`examples/`](examples/):
 
 ## Built-in systems
 
-Inverse legend: ✅ validated (tests + paper) · ⚠️ unverified · ❌ known to fail.
+Inverse legend: ✅ validated · ⚠️ unverified · ❌ known to fail.
 
 | Name | States | Operator | MPC | Inverse |
 |---|---|:---:|:---:|:---:|
-| `cstr` | CA, CB, TR, TK | ✅ | ✅ tracking | ⚠️ |
-| `triple_tank` | h1, h2, h3 | ✅ | ✅ tracking | ⚠️ |
+| `cstr` | C_A, C_B, T_R, T_K | ✅ | ✅ tracking | ⚠️ |
+| `triple_tank` | h1, h2, h3 (cm; time in s) | ✅ | ✅ tracking | ⚠️ |
 | `fedbatch_bioreactor` | Xs, Ss, Ps, Vs | ✅ | ✅ economic | ❌ |
-| `lotka_volterra` | prey, predator | ✅ | — | ✅ |
+| `lotka_volterra` | U, R (scaled prey, predator) | ✅ | — | ✅ |
+| `lotka_volterra_ur` | r (prey), p (predator) | — | — | — |
 | `euler` | ω₁, ω₂, ω₃ | — | — | ✅ |
+| `damped_pendulum` | θ, ω | — | — | — |
 
 ```python
 print(adalib.list_systems())
-# ['cstr', 'euler', 'fedbatch_bioreactor', 'lotka_volterra', 'triple_tank']
+# ['cstr', 'damped_pendulum', 'euler', 'fedbatch_bioreactor',
+#  'lotka_volterra', 'lotka_volterra_ur', 'triple_tank']
 ```
 
 ---
 
 ## Tests
 
-```bash
-pytest -q tests/
-python -X utf8 scripts/verify_merge_regression.py
-```
+`tests/` holds runnable scripts, one per feature. Most of them **train a model
+when executed** (some for many minutes), so run them individually rather than
+with a bare `pytest tests/`:
 
-Test coverage:
+```bash
+python tests/test_adalib_forward_euler.py     # one script
+pytest -q tests/test_adalib_mpc_autodiff.py   # the fast pytest suite
+```
 
 | File | Coverage |
 |---|---|
-| `test_adalib_forward.py` | Forward solver — generic systems |
+| `test_adalib_forward.py` | Forward — user-defined system |
 | `test_adalib_forward_euler.py` | Forward — Euler rigid body |
-| `test_adalib_forward_lotka.py` | Forward — Lotka-Volterra |
-| `test_adalib_forward_pendulum.py` | Forward — pendulum |
-| `test_adalib_operator.py` | Operator learning — generic |
-| `test_adalib_operator_triple_tank.py` | Operator — triple tank |
-| `test_adalib_operator_speaker.py` | Operator — speaker system |
+| `test_adalib_forward_lotka.py` | Forward — Lotka–Volterra |
+| `test_adalib_forward_pendulum.py` | Forward — damped pendulum |
+| `test_adalib_forward_ev_itms.py` | Forward — additional user-defined system |
+| `test_adalib_inverse_lv.py` | Inverse — Lotka–Volterra |
+| `test_adalib_inverse_euler.py` | Inverse — Euler rigid body |
+| `test_adalib_inverse_pendulum.py` | Inverse — damped pendulum |
+| `test_adalib_operator.py` | Operator — CSTR (paper-size settings) |
+| `test_adalib_operator_triple_tank.py` | Operator — triple tank (paper-size settings) |
+| `test_adalib_operator_speaker.py` | Operator — user-defined system |
+| `test_adalib_operator_ev_itms.py` | Operator — additional user-defined system |
 | `test_adalib_mpc.py` | MPC workflow |
-| `test_adalib_mpc_autodiff.py` | Autodiff/CEM surrogate MPC + gradient-vs-FD consistency |
 | `test_adalib_mpc_forward.py` | MPC with forward reference |
-| `test_adalib_mpc_bioreactor.py` | Economic MPC — bioreactor |
-| `test_adalib_inverse_lv.py` | Inverse — Lotka-Volterra |
-| `test_adalib_inverse_euler.py` | Inverse — Euler body |
-| `test_adalib_inverse_pendulum.py` | Inverse — pendulum |
+| `test_adalib_mpc_bioreactor.py` | Economic MPC — fed-batch bioreactor |
+| `test_adalib_mpc_autodiff.py` | Autodiff / CEM surrogate MPC, gradient-vs-FD consistency (pytest) |
 
 ---
 
 ## Package layout
 
 ```
-adalib_project/
-├── adalib/                         # public API (pip-installable)
-│   ├── _vendor/legacy/             # vendored ADA-F / LPA / Operator-MPC backend
-│   ├── systems/                    # ODESystem, 5 built-ins, CallableODESystem, registry
-│   ├── forward/                    # ForwardSolver, ForwardOptions
-│   ├── operator/                   # OperatorLearner, predict_step, predict_rollout
-│   ├── mpc/                        # MPCOptions, generic tracking MPC
-│   ├── inverse/                    # InverseSolver, InverseOptions, InverseResult,
-│   │                               #   InverseParameter, ObservationData, data_gen
-│   ├── workflows/                  # run_forward, run_operator, run_mpc, run_inverse, run
-│   └── utils/                      # paths, metrics, plotting
-├── examples/
-│   ├── simple_api/                 # numbered quickstart scripts (01–05)
-│   ├── forward/                    # forward examples
-│   ├── operator/                   # operator learning examples
-│   ├── mpc/                        # MPC examples
-│   └── inverse/                    # inverse parameter estimation examples
-├── tests/                          # pytest test suite (13 test files)
-└── scripts/verify_merge_regression.py
+ADAF_Library/
+├── adalib/                  # the installable package
+│   ├── _vendor/legacy/      # vendored ADA-F / LPA / operator-MPC backend (required at runtime)
+│   ├── systems/             # ODESystem, built-in systems, CallableODESystem, registry
+│   ├── forward/             # ForwardSolver, ForwardOptions
+│   ├── operator/            # OperatorLearner, predict_step, predict_rollout
+│   ├── mpc/                 # MPCOptions, generic and surrogate MPC
+│   ├── inverse/             # InverseSolver, InverseOptions, InverseParameter, data_gen
+│   ├── workflows/           # run_forward, run_operator, run_mpc, run_inverse, run
+│   └── utils/               # paths, metrics, plotting
+├── examples/                # simple_api/, forward/, inverse/, operator/, mpc/
+├── tests/                   # runnable feature scripts (see Tests)
+├── docs/                    # Sphinx sources for the ReadTheDocs site
+└── paper_artifacts/         # archived checkpoint + data for the paper's bioreactor results
 ```
 
 ---
+
+## Reproducing the paper's reported results
+
+The defaults used in the quick-start examples above are for illustration
+only — they do **not** reproduce the accuracy reported in the paper. Each
+benchmark's operator was trained with a *system-specific* network size and
+training-set size (the paper's operator hyperparameter table, Appendix A):
+
+| System | `N_p` | `n_seg` | `hidden` | `n_layers` | `n_train` | `epochs` | `batch_size` |
+|---|---|---|---|---|---|---|---|
+| Lotka–Volterra | 21 | 20 | 256 | 3 | 4,000 | 2,000 | 128 |
+| Triple-tank | 20 | 10 | 128 | 3 | 20,000 | 2,000 | 128 |
+| CSTR | 24 | 25 | 192 | 3 | 20,000 | 2,000 | 256 |
+| Fed-batch bioreactor | 30 | 50 | 128 | 3 | 50,000 | 2,000 | 128 |
+
+To reproduce, e.g., the CSTR operator accuracy, pass these explicitly rather
+than relying on the quick-start defaults:
+
+```python
+import adalib
+
+system  = adalib.get_system("cstr")
+options = adalib.OperatorOptions(
+    basis="lpa",
+    n_train=20000, n_val=4000,
+    hidden=192, n_layers=3,
+    epochs=2000, batch_size=256,
+    work_dir="./runs/cstr_operator_paper",
+)
+result = adalib.run_operator(
+    system=system,
+    x0=[0.8, 0.5, 134.14, 130.0],
+    t_span=(0.0, 0.5),
+    options=options,
+)
+```
+
+`n_seg` comes from the built-in system's segmentation, not from
+`OperatorOptions`. Complete runnable scripts at these sizes exist for the
+CSTR (`tests/test_adalib_operator.py`) and the triple tank
+(`tests/test_adalib_operator_triple_tank.py`). Training at these sizes takes
+much longer than the quick-start defaults.
+
+The archived checkpoint, training configuration, and evaluation data behind
+the paper's fed-batch bioreactor results are in
+`paper_artifacts/bioreactor_fig7_checkpoint/`; see that directory's README for
+the exact reproduction steps. The current `FedBatchBioreactor` sampling ranges
+differ from the archived run, so retraining with the row above does not
+reproduce those numbers exactly.
+
+**Forward simulation (Euler rigid body).** The paper's 1,500-parameter
+configuration is `ForwardOptions(basis="adaf", N_p=10, n_seg=50, N_m=100,
+Nt_total=2500, gamma=0.9, epochs=5, adam_inner=100, use_lbfgs=True)`; see also
+`examples/forward/euler_forward.py`. The forward scripts in `tests/` use
+smaller quick-start settings.
 
 ## Known limitations in v0.1.0
 
@@ -760,3 +642,10 @@ adalib_project/
 - **Generated artifacts** (datasets, checkpoints, plots) are written to
   `options.work_dir` and are not shipped with the package; each user generates
   them on first run.
+
+---
+
+## License
+
+Released under the MIT License (see `LICENSE`). The vendored backend in
+`adalib/_vendor/legacy/` is covered by `THIRD_PARTY_NOTICES.md`.

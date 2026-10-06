@@ -1,58 +1,63 @@
 API Reference
 =============
 
-ADAF 
----------
+The public API is exposed at the top level of the ``adalib`` package
+(``import adalib``).
 
-.. automodule:: pinn_lib.ADAF.api
+Entry points
+------------
+
+.. autofunction:: adalib.run_forward
+.. autofunction:: adalib.run_inverse
+.. autofunction:: adalib.run_operator
+.. autofunction:: adalib.run_mpc
+.. autofunction:: adalib.data_gen
+
+Options
+-------
+
+.. autoclass:: adalib.ForwardOptions
    :members:
-   :undoc-members:
-   :show-inheritance:
 
-.. automodule:: pinn_lib.ADAF.model
+.. autoclass:: adalib.InverseOptions
    :members:
-   :undoc-members:
-   :show-inheritance:
 
-.. automodule:: pinn_lib.ADAF.solver
+.. autoclass:: adalib.InverseParameter
    :members:
-   :undoc-members:
-   :show-inheritance:
 
-
-ADAF_seq
---------
-
-.. automodule:: pinn_lib.ADAF_seq.api
+.. autoclass:: adalib.OperatorOptions
    :members:
-   :undoc-members:
-   :show-inheritance:
 
-.. automodule:: pinn_lib.ADAF_seq.core.model
+.. autoclass:: adalib.MPCOptions
    :members:
-   :undoc-members:
-   :show-inheritance:
 
-.. automodule:: pinn_lib.ADAF_seq.core.solver
+Systems
+-------
+
+.. autofunction:: adalib.get_system
+.. autofunction:: adalib.list_systems
+.. autofunction:: adalib.register_system
+
+.. autoclass:: adalib.ODESystem
    :members:
-   :undoc-members:
-   :show-inheritance:
 
-
-PINN
----------
-
-.. automodule:: pinn_lib.PINN.api
+.. autoclass:: adalib.CallableODESystem
    :members:
-   :undoc-members:
-   :show-inheritance:
 
-.. automodule:: pinn_lib.PINN.model
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Results
+-------
 
-.. automodule:: pinn_lib.PINN.solver
+.. autoclass:: adalib.ForwardResult
    :members:
-   :undoc-members:
-   :show-inheritance:
+
+.. autoclass:: adalib.InverseResult
+   :members:
+
+.. autoclass:: adalib.OperatorResult
+   :members:
+
+.. autoclass:: adalib.MPCResult
+   :members:
+
+.. autoclass:: adalib.ObservationData
+   :members:

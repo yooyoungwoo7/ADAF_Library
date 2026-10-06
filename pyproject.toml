@@ -5,10 +5,29 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "adalib-ode"
 version = "0.1.0"
-description = "ADA-based ODE forward solving, operator learning, and MPC"
+description = "ADAlib: Anti-Derivative Approximator (ADA) library for ODE forward simulation, inverse estimation, operator learning, and MPC"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
+authors = [
+    { name = "Youngwoo Yoo" },
+    { name = "Dayeong Kang" },
+    { name = "Suhyeong Lim" },
+    { name = "Sang-Hyun Rhie" },
+    { name = "Jeongsu Lee", email = "leejeongsu@khu.ac.kr" },
+]
+keywords = ["ODE", "physics-informed", "operator learning", "model predictive control", "scientific machine learning"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
 dependencies = [
     "numpy>=1.24",
     "scipy>=1.10",
@@ -25,6 +44,11 @@ dev = [
     "build>=1.0",
     "twine>=4.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/yooyoungwoo7/ADAF_Library"
+Documentation = "https://adaf-library.readthedocs.io/en/latest/"
+Source = "https://github.com/yooyoungwoo7/ADAF_Library"
 
 [tool.setuptools.packages.find]
 where = ["."]

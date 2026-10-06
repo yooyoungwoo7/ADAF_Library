@@ -22,14 +22,17 @@ adalib.utils.set_adalib_plot_style(style="serif")
 system = adalib.get_system("triple_tank")
 
 # ── 2. Options — Case 1: 데이터 생성 + 훈련 ──────────────────────────
-# 첫 실행 시 데이터 생성 + 학습이 필요합니다 (약 3–5분).
-# 이후 재실행은 아래 options_infer 사용 (빠름).
+# 첫 실행 시 데이터 생성 + 학습이 필요합니다.
+# Sizes below match the paper's Appendix A, Table 15 (Triple-tank row) so
+# this script reproduces Table 4's accuracy; the earlier (hidden=64,
+# n_layers=2, n_train=2000) settings were a quick-start-only config and do
+# not reproduce the paper's reported error.
 options = adalib.OperatorOptions(
     basis="lpa",
 
     # Data generation
-    n_train=2000,
-    n_val=200,
+    n_train=20000,
+    n_val=4000,
     seed=42,
     generate_data=True,
     reuse_existing_data=False,
@@ -37,16 +40,16 @@ options = adalib.OperatorOptions(
     # Training
     train=True,
     reuse_existing_checkpoint=False,
-    epochs=1000,
-    batch_size=8,
+    epochs=2000,
+    batch_size=128,
     lr=3e-3,
-    hidden=64,
-    n_layers=2,
+    hidden=128,
+    n_layers=3,
 
     # Inference
     infer=True,
 
-    work_dir="./runs/operator_triple_tank",
+    work_dir="./runs/triple_tank_operator_paper",
     verbose=True,
 )
 
@@ -71,9 +74,9 @@ options_infer = adalib.OperatorOptions(
     train=False,
     reuse_existing_checkpoint=True,
     infer=True,
-    work_dir="./runs/operator_triple_tank",
-    hidden=64,
-    n_layers=2,
+    work_dir="./runs/triple_tank_operator_paper",   # same run as Case 1
+    hidden=128,
+    n_layers=3,
     verbose=False,
 )
 
@@ -98,9 +101,17 @@ for tc in TEST_CASES[1:]:
 state_names  = ["h1",        "h2",        "h3"]
 state_labels = ["$h_1$ [cm]","$h_2$ [cm]","$h_3$ [cm]"]
 
+# NOTE: plot_operator_result()'s default t_scale=60 assumes an hours-based
+# system (CSTR/LV/bioreactor) and converts to minutes for display. The
+# triple-tank system's native time unit is SECONDS (T_FINAL=300 s), so the
+# default would compare the operator at t*60 against a reference defined only
+# on [0, 300] and report a spurious ~100% error. Override explicitly.
+
 # Case 1: result.plot() with solve_ivp reference (params=[q1, q2] as controls)
 fig, axes, metrics = result.plot(
     reference    = "solve_ivp",
+    t_scale      = 1.0,
+    t_unit       = "s",
     controls     = [100.0, 150.0],   # q1, q2 [cm³/s]
     state_names  = state_labels,
     state_groups = [[0], [1], [2]],
@@ -131,6 +142,8 @@ fig2, axes2, metrics2 = adalib.utils.plot_operator_result(
     x0          = x0_list,
     control     = ctrl_list,
     reference   = "solve_ivp",
+    t_scale     = 1.0,
+    t_unit      = "s",
     state_names = state_labels,
     labels      = col_labels,
     state_groups= [[0], [1], [2]],
