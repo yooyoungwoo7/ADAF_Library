@@ -4,7 +4,7 @@ Path utilities for locating the vendored legacy backend.
 
 The legacy backend lives at adalib/_vendor/legacy/ so it is co-located
 with the installed package and works after both `pip install -e .` and
-`pip install adalib-ode` from a wheel.
+`pip install adalib-IFL` from a wheel.
 """
 from __future__ import annotations
 import os

@@ -1,4 +1,4 @@
-# ADAlib (`adalib-ode`)
+# ADAlib (`adalib-IFL`)
 
 **ADAlib** is a Python library built on the Anti-Derivative Approximator (ADA)
 representation for ordinary differential equations. One library covers four
@@ -13,7 +13,13 @@ trained operator as a differentiable, batchable surrogate.
 
 ## Install
 
-From GitHub (recommended):
+From PyPI:
+
+```bash
+pip install adalib-IFL
+```
+
+or the latest version from GitHub:
 
 ```bash
 pip install git+https://github.com/yooyoungwoo7/ADAF_Library.git
@@ -27,10 +33,12 @@ cd ADAF_Library
 pip install -e .
 ```
 
-Requires Python >= 3.10 and TensorFlow >= 2.13.
+Requires Python >= 3.10 and TensorFlow >= 2.13. Tested with Python 3.13.5 and
+TensorFlow 2.20.0; `requirements.txt` pins the exact tested environment
+(`pip install -r requirements.txt`).
 
 ```python
-import adalib   # distribution name is "adalib-ode"; the import name is "adalib"
+import adalib   # the PyPI distribution is "adalib-IFL"; the import name is "adalib"
 ```
 
 > **Note:** an unrelated PyPI package called `adalib` uses the same import
