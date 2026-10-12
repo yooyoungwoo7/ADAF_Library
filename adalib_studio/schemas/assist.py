@@ -6,6 +6,7 @@ from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, model_validator
 
 from .common import SystemSpec, TimeSpan
+from .forward import ForwardOptionsModel
 
 Provider = Literal["anthropic", "openai"]
 
@@ -29,6 +30,7 @@ class AssistForwardRequest(BaseModel):
     # what is on screen now, so "set mu to 3" edits it instead of starting over
     current_system: Optional[SystemSpec] = None
     current_time: Optional[TimeSpan] = None
+    current_options: Optional[ForwardOptionsModel] = None
     # earlier turns of this chat (oldest first)
     history: List[AssistMessage] = Field(default_factory=list, max_length=20)
     # browser language (navigator.language, e.g. "ko-KR"), used for the reply when the request is ambiguous
@@ -44,6 +46,7 @@ class AssistForwardRequest(BaseModel):
 class AssistForwardResponse(BaseModel):
     system: SystemSpec
     time: TimeSpan
+    options: ForwardOptionsModel   # complete solver options after the change (unchanged ones kept)
     reply: str
     provider: Provider
     model: str

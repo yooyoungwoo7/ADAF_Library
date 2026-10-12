@@ -28,6 +28,7 @@ from ..config import SETTINGS_FILE
 from ..schemas.assist import (AssistForwardRequest, AssistForwardResponse, AssistProviderStatus,
                               AssistSettingsUpdate, AssistStatus)
 from ..schemas.common import SystemSpec, TimeSpan
+from ..schemas.forward import ForwardOptionsModel
 from .equation_parser import CONSTANTS, FUNCTIONS
 from .system_builder import validate_spec
 
@@ -137,8 +138,10 @@ Answer with ONE JSON object and nothing else:
     "parameters": [{{"name": "k", "value": 2.0}}],
     "equations": ["-k*x"]
   }},
-  "time": {{"t0": 0.0, "t1": 5.0}}
+  "time": {{"t0": 0.0, "t1": 5.0}},
+  "options": {{"n_seg": 100, "Nt_total": 5000}}
 }}
+"options" is optional: include only the solver settings to change (omit it, or use {{}}, to keep them).
 
 Rules:
 - equations[i] is the right-hand side of d(states[i])/dt, same order and count as states.
@@ -160,6 +163,16 @@ Rules:
   (a greeting, a question about the current system) leaves it unchanged; if in doubt, make the change.
 - If the user asks to modify the current system (a value, a term, the time span), change only that and
   return the complete updated system.
+- Solver settings ("options", adalib.ForwardOptions). Change them only when the user asks (e.g. "more
+  segments", "use LPA", "turn off L-BFGS", "10 epochs") and keep the rest. Keys:
+  basis "adaf" (ADA-F: adaptive Fourier on n_seg sequential time segments) or "lpa" (Legendre, whole span);
+  n_seg segments (ADA-F, 1-2000; more for longer spans or faster dynamics); Nt_total collocation points
+  over the whole span (2-200000; must be divisible by n_seg for ADA-F, so adjust it with n_seg and say so);
+  epochs Adam outer epochs (0-10000); adam_inner Adam steps per epoch (1-100000); adam_lr (0-1];
+  use_lbfgs true/false (L-BFGS polish after Adam); N_p Fourier/Legendre modes (1-500); N_m Fourier
+  truncation (ADA-F, 1-2000); order LPA polynomial order (1-50); dtype "float64" or "float32";
+  gamma (>0) and L basis time-scale parameters. If asked for good settings for this system, choose
+  them and explain briefly.
 - "reply" language: the language of the user's latest request; if that is unclear (a name, a formula,
   a one-word message), the user's interface language given below.
 - Write "reply" as plain text: real characters (θ, ω) or names (theta), never \\u escapes, LaTeX or markdown.
@@ -168,11 +181,13 @@ Rules:
 
 def _context(req: AssistForwardRequest) -> str:
     lang = f"User interface language: {req.language}.\n" if req.language else ""
+    options = json.dumps({"options": (req.current_options or ForwardOptionsModel()).model_dump()})
     if req.current_system is None:
-        return lang + "There is no system on screen yet."
+        return lang + "There is no system on screen yet. Current solver settings: " + options
     cur = {"system": req.current_system.model_dump(include={"name", "states", "parameters", "equations"}),
            "time": (req.current_time or TimeSpan()).model_dump()}
-    return lang + "The system currently on screen:\n" + json.dumps(cur, ensure_ascii=False)
+    return (lang + "The system currently on screen:\n" + json.dumps(cur, ensure_ascii=False)
+            + "\nCurrent solver settings: " + options)
 
 
 def _messages(req: AssistForwardRequest) -> List[dict]:
@@ -258,8 +273,9 @@ def _clean_reply(reply: str) -> str:
     return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", reply).strip()
 
 
-def _parse(text: str) -> Tuple[SystemSpec, TimeSpan, str]:
-    """JSON answer -> (system, time, reply); raises ValueError with a message for the model."""
+def _parse(text: str, current_options: Optional[ForwardOptionsModel] = None
+           ) -> Tuple[SystemSpec, TimeSpan, ForwardOptionsModel, str]:
+    """JSON answer -> (system, time, options, reply); raises ValueError with a message for the model."""
     m = re.search(r"\{.*\}", text, re.S)          # tolerate ```json fences or a stray sentence
     if not m:
         raise ValueError("The answer was not a JSON object.")
@@ -274,7 +290,21 @@ def _parse(text: str) -> Tuple[SystemSpec, TimeSpan, str]:
     check = validate_spec(system)
     if not check.ok:
         raise ValueError("; ".join(e.message for e in check.errors))
-    return system, time, _clean_reply(str(data.get("reply", "")))
+    options = _merge_options(current_options or ForwardOptionsModel(), data.get("options") or {})
+    return system, time, options, _clean_reply(str(data.get("reply", "")))
+
+
+def _merge_options(current: ForwardOptionsModel, patch) -> ForwardOptionsModel:
+    if not isinstance(patch, dict):
+        raise ValueError('"options" must be an object of settings to change.')
+    unknown = sorted(set(patch) - set(ForwardOptionsModel.model_fields))
+    if unknown:
+        raise ValueError(f"Unknown solver option(s) {unknown}; valid: {sorted(ForwardOptionsModel.model_fields)}.")
+    try:
+        return ForwardOptionsModel(**{**current.model_dump(), **patch})
+    except ValidationError as exc:
+        raise ValueError("options: " + "; ".join(
+            (f"{'.'.join(map(str, e['loc']))}: " if e["loc"] else "") + e["msg"] for e in exc.errors()))
 
 
 def describe_forward(req: AssistForwardRequest) -> AssistForwardResponse:
@@ -292,9 +322,9 @@ def describe_forward(req: AssistForwardRequest) -> AssistForwardResponse:
     for attempt in range(1, MAX_ATTEMPTS + 1):
         text = _call(provider, model, key, messages)
         try:
-            system, time, reply = _parse(text)
-            return AssistForwardResponse(system=system, time=time, reply=reply, provider=provider,
-                                         model=model, attempts=attempt)
+            system, time, options, reply = _parse(text, req.current_options)
+            return AssistForwardResponse(system=system, time=time, options=options, reply=reply,
+                                         provider=provider, model=model, attempts=attempt)
         except (ValueError, json.JSONDecodeError) as exc:
             problem = str(exc)
             messages = messages + [
