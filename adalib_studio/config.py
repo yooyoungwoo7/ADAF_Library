@@ -21,6 +21,11 @@ FRONTEND_DIST = PROJECT_DIR / "frontend" / "dist" if SOURCE_TREE else PACKAGE_DI
 _DEFAULT_RUNS = PROJECT_DIR / "runs" if SOURCE_TREE else Path.home() / "adalib-studio" / "runs"
 RUNS_DIR = Path(os.environ.get("ADALIB_STUDIO_RUNS", _DEFAULT_RUNS)).resolve()
 
+# User settings written from the UI (LLM assistant provider, API keys, models). Kept in the
+# home directory in both modes so keys never land inside a repository checkout.
+SETTINGS_FILE = Path(os.environ.get("ADALIB_STUDIO_SETTINGS",
+                                    Path.home() / "adalib-studio" / "settings.json")).resolve()
+
 # Interpreter used for worker processes. Must have adalib-IFL installed.
 WORKER_PYTHON = os.environ.get("ADALIB_STUDIO_PYTHON", sys.executable)
 
@@ -33,4 +38,4 @@ CORS_ORIGINS = os.environ.get(
 ).split(",")
 
 ADALIB_DISTRIBUTION = "adalib-IFL"
-SUPPORTED_ADALIB_VERSIONS = ("0.1.0", "0.1.1", "0.1.2")
+SUPPORTED_ADALIB_VERSIONS = ("0.1.0", "0.1.1", "0.1.2", "0.1.3")

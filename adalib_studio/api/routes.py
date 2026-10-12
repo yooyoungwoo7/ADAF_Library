@@ -6,12 +6,13 @@ from fastapi.responses import FileResponse
 import json
 
 from ..examples.catalog import MPC_BUILTINS, MPC_PRESETS, OPERATOR_BUILTINS, OPERATOR_PRESETS, list_examples
+from ..schemas.assist import AssistForwardRequest, AssistForwardResponse, AssistSettingsUpdate, AssistStatus
 from ..schemas.common import JobCreated, SystemSpec, ValidateResponse
 from ..schemas.forward import ForwardRunRequest
 from ..schemas.inverse import InverseRunRequest
 from ..schemas.mpc import MPCLoopRequest, MPCTrainRequest
 from ..schemas.operator import OperatorInferRequest, OperatorTrainRequest
-from ..services import mpc_models, package_info
+from ..services import llm_assist, mpc_models, package_info
 from ..services.capabilities import capabilities
 from ..services.equation_parser import EquationError
 from ..services.log_parser import (forward_progress, inverse_progress, mpc_progress, operator_progress,
@@ -48,6 +49,26 @@ def examples(module: str | None = None):
 @router.post("/system/validate", response_model=ValidateResponse)
 def validate_system(spec: SystemSpec):
     return validate_spec(spec)
+
+
+# ── natural-language assistant (LLM) ────────────────────────────────────
+
+@router.get("/assist/status", response_model=AssistStatus)
+def assist_status():
+    return llm_assist.status()
+
+
+@router.put("/assist/settings", response_model=AssistStatus)
+def assist_settings(upd: AssistSettingsUpdate):
+    return llm_assist.update_settings(upd)
+
+
+@router.post("/assist/forward", response_model=AssistForwardResponse)
+def assist_forward(req: AssistForwardRequest):
+    try:
+        return llm_assist.describe_forward(req)
+    except llm_assist.AssistError as exc:
+        raise HTTPException(exc.status, detail={"message": str(exc)})
 
 
 # ── forward ─────────────────────────────────────────────────────────────

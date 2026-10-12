@@ -67,6 +67,12 @@ port if 8000 is taken). Stop it with Ctrl+C.
 | `--no-browser` | do not open the browser |
 | `--host 0.0.0.0` | let other computers on the network connect (default: this computer only) |
 
+In the Forward Solver, the **AI assistant** panel turns a sentence such as
+"damped pendulum with gamma = 0.5 for 10 s" into the system definition (with
+your own Anthropic or OpenAI API key, set in the panel's Settings). The answer
+is checked by the equation parser and fills the editor; you review it and
+press Run.
+
 Everything runs on your machine. The browser only shows the interface; a local
 FastAPI server accepts each job and starts a separate Python worker process
 that imports `adalib` and computes it. Results, logs and trained surrogates
