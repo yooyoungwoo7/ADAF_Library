@@ -82,7 +82,8 @@ Troubleshooting on Windows:
   260-character path limit in deep folders. Create the virtual environment in
   a short path such as `C:\Users\<you>\adalib-studio`, or enable long paths.
 
-The `adalib_studio/` directory is generated from the ADAlib Studio repository;
+The `adalib_studio/` directory is generated from the
+[ADAlib Studio repository](https://github.com/yooyoungwoo7/ADAlib-Studio);
 change the GUI there, not in this repository.
 
 ---
