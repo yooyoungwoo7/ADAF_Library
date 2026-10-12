@@ -23,6 +23,8 @@ class AssistForwardRequest(BaseModel):
     current_time: Optional[TimeSpan] = None
     # earlier turns of this chat (oldest first)
     history: List[AssistMessage] = Field(default_factory=list, max_length=20)
+    # browser language (navigator.language, e.g. "ko-KR"), used for the reply when the request is ambiguous
+    language: Optional[str] = Field(None, max_length=35)
 
 
 class AssistForwardResponse(BaseModel):

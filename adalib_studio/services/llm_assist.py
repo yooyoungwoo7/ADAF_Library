@@ -116,7 +116,7 @@ initial-value problem dx_i/dt = f_i(x; p) on [t0, t1].
 
 Answer with ONE JSON object and nothing else:
 {{
-  "reply": "1-3 short sentences for the user, in the user's language: what you set up and any value you assumed",
+  "reply": "1-3 short plain-text sentences for the user: what you set up and any value you assumed",
   "system": {{
     "name": "snake_case_name",
     "states": [{{"name": "x", "initial": 1.0}}],
@@ -138,15 +138,20 @@ Rules:
 - Values the user did not give: choose standard textbook values and say so in "reply".
 - At most 20 states and 50 parameters; t1 > t0. No control inputs.
 - If a current system is given, change only what the user asks for and return the complete updated system.
+  If the message asks for no change (a greeting, a question), return the current system unchanged.
+- "reply" language: the language of the user's latest request; if that is unclear (a name, a formula,
+  a one-word message), the user's interface language given below.
+- Write "reply" as plain text: real characters (θ, ω) or names (theta), never \\u escapes, LaTeX or markdown.
 """
 
 
 def _context(req: AssistForwardRequest) -> str:
+    lang = f"User interface language: {req.language}.\n" if req.language else ""
     if req.current_system is None:
-        return "There is no system on screen yet."
+        return lang + "There is no system on screen yet."
     cur = {"system": req.current_system.model_dump(include={"name", "states", "parameters", "equations"}),
            "time": (req.current_time or TimeSpan()).model_dump()}
-    return "The system currently on screen:\n" + json.dumps(cur)
+    return lang + "The system currently on screen:\n" + json.dumps(cur, ensure_ascii=False)
 
 
 def _messages(req: AssistForwardRequest) -> List[dict]:
@@ -197,6 +202,16 @@ def _call(provider: str, model: str, key: str, messages: List[dict]) -> str:
     return (choices[0].get("message") or {}).get("content") or ""
 
 
+_BROKEN_ESCAPE = re.compile(r"([\x01-\x08\x0b\x0c\x0e-\x1f])([0-9a-fA-F]{2})")
+
+
+def _clean_reply(reply: str) -> str:
+    """Repair a mis-escaped character some models emit in JSON mode ("\\u0003b8" for "\\u03b8" = θ),
+    then drop any remaining control characters."""
+    reply = _BROKEN_ESCAPE.sub(lambda m: chr((ord(m.group(1)) << 8) | int(m.group(2), 16)), reply)
+    return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", reply).strip()
+
+
 def _parse(text: str) -> Tuple[SystemSpec, TimeSpan, str]:
     """JSON answer -> (system, time, reply); raises ValueError with a message for the model."""
     m = re.search(r"\{.*\}", text, re.S)          # tolerate ```json fences or a stray sentence
@@ -213,7 +228,7 @@ def _parse(text: str) -> Tuple[SystemSpec, TimeSpan, str]:
     check = validate_spec(system)
     if not check.ok:
         raise ValueError("; ".join(e.message for e in check.errors))
-    return system, time, str(data.get("reply", "")).strip()
+    return system, time, _clean_reply(str(data.get("reply", "")))
 
 
 def describe_forward(req: AssistForwardRequest) -> AssistForwardResponse:
