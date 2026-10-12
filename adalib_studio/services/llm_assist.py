@@ -164,15 +164,24 @@ attribute), applied at once without re-running and saved with the project. The f
 below with their current layout and traces, plus every figure id of the module. Send a JSON merge patch:
 include only what changes; objects merge, null removes something set earlier (restoring the default look).
   "figure_style": {
-    "<figure id>" | "<prefix>*" | "*" (every figure of this module): {
+    "<figure id>" | "<prefix>*" | "*" (every figure of this module, for EVERY problem): {
       "layout": {Plotly layout attributes, e.g. "xaxis": {"ticks": ""}, "legend": {...}, "font": {...},
                  "title": {"text": "..."}, "margin": {...}, "annotations": [...]; "xaxes" / "yaxes" apply
                  to every x / y axis of the figure (subplots have xaxis2, yaxis2, ...)},
       "traces": {"<selector>": {Plotly trace attributes, e.g. "line": {"color": "red", "width": 2, "dash": "dot"},
                  "marker": {...}, "name": "...", "showlegend": false, "visible": false}},
       "export": {"width_cm": 8, "height_cm": 6, "dpi": 600, "format": "png" | "svg"}
-    }
+    },
+    "@<problem name>": {"<figure id>" | "*": {...same as above, for that problem's figures only}}
   }
+Two levels: keys without "@" style the module's figures for every problem (the general look: fonts,
+ticks, line widths, legend placement, grid, export size); "@<problem name>" (the problem name given below,
+exactly) styles only that problem's figures and is applied on top. Titles, axis titles, annotations, axis
+ranges, trace names and per-trace colours belong to one problem: put them under "@<problem name>" unless
+the user clearly asks for every problem ("all problems", "always", "every system") - each problem keeps its
+own titles, and changing one problem's title must never change another's. The general look goes without
+"@" unless the user says "only this problem". To change or remove a title, edit the same level it was set
+at (see the current figure_style; null removes it).
 Trace selectors: "*" all, "#2" by index, "name:<trace name>", "legendgroup:<group>", "axis:y2" (every trace
 drawn on that axis, i.e. one subplot). Look at the listed traces and axes to pick them; for subplots, a
 state's panel is the axis whose title is that state.
@@ -182,12 +191,11 @@ Useful recipes: minor (small inner) ticks off: "yaxes"/"xaxes" {"minor": {"ticks
 room); legend inside top-right: {"x": 0.98, "xanchor": "right", "y": 0.98, "yanchor": "top"}; hide the
 legend: "showlegend": false; grid: {"showgrid": true, "gridcolor": "#ddd"}; frame: {"mirror": true,
 "showline": true}; log axis: {"type": "log"}; axis title: {"title": {"text": "Time [s]"}}.
-Names that change with the problem: text may contain {system} (the current system's name), {state} (the
+Names that change with the problem: text may contain {system} (the problem's system name), {state} (the
 state of a per-state panel, trajectory_panel_<state>) and {module}; they are filled in when the figure is
-drawn, so the style keeps working when the user switches problems. Whenever the user means "the system /
-problem name" (not one fixed text), write the placeholder, never today's name: e.g. "system name as the
-title" -> "title": {"text": "{system}"} (for every figure use "*"), "<system> trajectories" ->
-"{system} trajectories". This also works in plot_style text keys.
+drawn. A rule for every problem that uses the name ("always title each plot with its system name") is
+"*": {"layout": {"title": {"text": "{system}"}}} at the module level; a title for this problem only goes
+under "@<problem name>". Use figure_style (not plot_style) for titles.
 A title needs room: with a title, also set "margin": {"t": 60} (or more for large fonts) so it is not cut off.
 Do not say something cannot be styled: if Plotly can do it, do it with figure_style. If no figure is on
 screen yet, use the figure ids (they apply when the figure appears).
@@ -382,7 +390,8 @@ def _figures(req, current: dict) -> str:
         shown = json.dumps([{"id": f.get("id"), "title": f.get("title"), "traces": f.get("traces"),
                              "axes": sorted(k for k in (f.get("layout") or {}) if k[1:5] == "axis")}
                             for f in req.figures], ensure_ascii=False)
-    return ("\nFigure ids of this module: " + json.dumps(req.figure_ids)
+    return ("\nProblem on screen (for \"@<problem name>\"): " + json.dumps(req.figure_system or "")
+            + "\nFigure ids of this module: " + json.dumps(req.figure_ids)
             + "\nFigures on screen (layout before the figure style): " + (shown if req.figures else "none yet")
             + "\nCurrent figure_style: " + json.dumps(current or {}, ensure_ascii=False))
 

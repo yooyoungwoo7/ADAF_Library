@@ -5,7 +5,8 @@ Free-form figure style from the AI assistant: Plotly layout / trace patches per 
     {"<figure id>" | "prefix*" | "*": {
         "layout": {...Plotly layout, deep-merged; "xaxes"/"yaxes" reach every x/y axis...},
         "traces": {"<selector>": {...Plotly trace attributes}},
-        "export": {"width_cm", "height_cm", "dpi", "format"}}}
+        "export": {"width_cm", "height_cm", "dpi", "format"}},
+     "@<system name>": {same figure keys: patches for that problem only, applied after the above}}
 
 Answers are JSON merge patches (RFC 7386): objects merge, null removes a key.
 """
@@ -54,11 +55,37 @@ def _id_ok(key: str, ids: Iterable[str]) -> bool:
     return key in ids
 
 
-def check_figure_style(style, figure_ids: Iterable[str], new_keys: Optional[Iterable[str]] = None) -> dict:
-    """Raise ValueError (message for the model) unless `style` is a valid figure style. Only `new_keys`
-    (default: all) must name a known figure, so a style kept from an earlier system stays valid."""
-    ids = list(figure_ids)
-    new = set(style if new_keys is None else new_keys)
+def _check_figure(key: str, fig) -> None:
+    if not isinstance(fig, dict):
+        raise ValueError(f"figure_style.{key} must be an object with layout, traces and/or export.")
+    extra = sorted(set(fig) - {"layout", "traces", "export"})
+    if extra:
+        raise ValueError(f"figure_style.{key}: unknown key(s) {extra}; use layout, traces, export.")
+    if "layout" in fig and not isinstance(fig["layout"], dict):
+        raise ValueError(f"figure_style.{key}.layout must be an object of Plotly layout attributes.")
+    traces = fig.get("traces", {})
+    if not isinstance(traces, dict):
+        raise ValueError(f'figure_style.{key}.traces must map selectors ("*", "#0", "name:...", "axis:y2") '
+                         "to trace attributes.")
+    for sel, attrs in traces.items():
+        if not SELECTOR.match(sel):
+            raise ValueError(f"figure_style.{key}.traces: bad selector '{sel}'; use \"*\", \"#<index>\", "
+                             "\"name:<trace name>\", \"legendgroup:<group>\" or \"axis:y2\".")
+        if not isinstance(attrs, dict):
+            raise ValueError(f"figure_style.{key}.traces['{sel}'] must be an object of trace attributes.")
+    if "export" in fig:
+        if not isinstance(fig["export"], dict):
+            raise ValueError(f"figure_style.{key}.export must be an object.")
+        try:
+            FigureExport(**fig["export"])
+        except ValidationError as exc:
+            raise ValueError(f"figure_style.{key}.export: " + "; ".join(
+                f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()))
+
+
+def check_figure_style(style) -> dict:
+    """Raise ValueError (message for the model) unless `style` is a valid figure style:
+    {figure key: patch} for the whole module, plus {"@<system>": {figure key: patch}} per problem."""
     if not isinstance(style, dict):
         raise ValueError('"figure_style" must map figure ids to {layout, traces, export}.')
     text = json.dumps(style)
@@ -67,32 +94,30 @@ def check_figure_style(style, figure_ids: Iterable[str], new_keys: Optional[Iter
     if "javascript:" in text.lower() or "<script" in text.lower():
         raise ValueError("figure_style must not contain scripts.")
     for key, fig in style.items():
-        if key in new and not _id_ok(key, ids):
-            raise ValueError(f"figure_style: unknown figure '{key}'; use \"*\", a prefix with * or one of {ids}.")
-        if not isinstance(fig, dict):
-            raise ValueError(f"figure_style.{key} must be an object with layout, traces and/or export.")
-        extra = sorted(set(fig) - {"layout", "traces", "export"})
-        if extra:
-            raise ValueError(f"figure_style.{key}: unknown key(s) {extra}; use layout, traces, export.")
-        if "layout" in fig and not isinstance(fig["layout"], dict):
-            raise ValueError(f"figure_style.{key}.layout must be an object of Plotly layout attributes.")
-        traces = fig.get("traces", {})
-        if not isinstance(traces, dict):
-            raise ValueError(f'figure_style.{key}.traces must map selectors ("*", "#0", "name:...", "axis:y2") '
-                             "to trace attributes.")
-        for sel, attrs in traces.items():
-            if not SELECTOR.match(sel):
-                raise ValueError(f"figure_style.{key}.traces: bad selector '{sel}'; use \"*\", \"#<index>\", "
-                                 "\"name:<trace name>\", \"legendgroup:<group>\" or \"axis:y2\".")
-            if not isinstance(attrs, dict):
-                raise ValueError(f"figure_style.{key}.traces['{sel}'] must be an object of trace attributes.")
-        if "export" in fig:
-            try:
-                FigureExport(**fig["export"]) if isinstance(fig["export"], dict) else FigureExport.model_validate(fig["export"])
-            except ValidationError as exc:
-                raise ValueError(f"figure_style.{key}.export: " + "; ".join(
-                    f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()))
+        if key.startswith("@"):
+            if not isinstance(fig, dict):
+                raise ValueError(f"figure_style.{key} must map figure ids to patches for that problem.")
+            for k, f in fig.items():
+                if k.startswith("@"):
+                    raise ValueError(f"figure_style.{key}.{k}: problem sections cannot be nested.")
+                _check_figure(f"{key}.{k}", f)
+        else:
+            _check_figure(key, fig)
     return style
+
+
+def _check_ids(patch: dict, ids, scope: str = "") -> None:
+    """Figures named by this answer must exist (styles kept from earlier problems are not re-checked)."""
+    for key, v in patch.items():
+        if v is None:
+            continue
+        if key.startswith("@") and not scope:
+            if not isinstance(v, dict):
+                raise ValueError(f"figure_style.{key} must map figure ids to patches for that problem.")
+            _check_ids(v, ids, key)
+        elif not _id_ok(key, ids):
+            where = f"figure_style.{scope}" if scope else "figure_style"
+            raise ValueError(f"{where}: unknown figure '{key}'; use \"*\", a prefix with * or one of {ids}.")
 
 
 def merge_figure_style(current, patch, figure_ids) -> dict:
@@ -100,5 +125,5 @@ def merge_figure_style(current, patch, figure_ids) -> dict:
         return current or {}
     if not isinstance(patch, dict):
         raise ValueError('"figure_style" must be an object.')
-    return check_figure_style(merge_patch(current or {}, patch), figure_ids,
-                              new_keys=[k for k, v in patch.items() if v is not None])
+    _check_ids(patch, list(figure_ids))
+    return check_figure_style(merge_patch(current or {}, patch))

@@ -37,6 +37,7 @@ class AssistForwardRequest(BaseModel):
     # figures on screen (id, title, layout, trace list) and every figure id of the module
     figures: List[Dict[str, Any]] = Field(default_factory=list, max_length=40)
     figure_ids: List[str] = Field(default_factory=list, max_length=100)
+    figure_system: str = Field("", max_length=200)   # the problem whose figures are on screen
     # earlier turns of this chat (oldest first)
     history: List[AssistMessage] = Field(default_factory=list, max_length=20)
     # browser language (navigator.language, e.g. "ko-KR"), used for the reply when the request is ambiguous
@@ -57,6 +58,7 @@ class AssistModuleRequest(BaseModel):
     state: Dict[str, Any] = Field(default_factory=dict)   # includes "figure_style"
     figures: List[Dict[str, Any]] = Field(default_factory=list, max_length=40)
     figure_ids: List[str] = Field(default_factory=list, max_length=100)
+    figure_system: str = Field("", max_length=200)   # the problem whose figures are on screen
     history: List[AssistMessage] = Field(default_factory=list, max_length=20)
     language: Optional[str] = Field(None, max_length=35)
 
