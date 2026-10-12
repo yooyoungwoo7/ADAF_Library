@@ -182,6 +182,13 @@ Useful recipes: minor (small inner) ticks off: "yaxes"/"xaxes" {"minor": {"ticks
 room); legend inside top-right: {"x": 0.98, "xanchor": "right", "y": 0.98, "yanchor": "top"}; hide the
 legend: "showlegend": false; grid: {"showgrid": true, "gridcolor": "#ddd"}; frame: {"mirror": true,
 "showline": true}; log axis: {"type": "log"}; axis title: {"title": {"text": "Time [s]"}}.
+Names that change with the problem: text may contain {system} (the current system's name), {state} (the
+state of a per-state panel, trajectory_panel_<state>) and {module}; they are filled in when the figure is
+drawn, so the style keeps working when the user switches problems. Whenever the user means "the system /
+problem name" (not one fixed text), write the placeholder, never today's name: e.g. "system name as the
+title" -> "title": {"text": "{system}"} (for every figure use "*"), "<system> trajectories" ->
+"{system} trajectories". This also works in plot_style text keys.
+A title needs room: with a title, also set "margin": {"t": 60} (or more for large fonts) so it is not cut off.
 Do not say something cannot be styled: if Plotly can do it, do it with figure_style. If no figure is on
 screen yet, use the figure ids (they apply when the figure appears).
 """
