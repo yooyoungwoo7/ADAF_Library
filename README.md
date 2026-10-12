@@ -67,13 +67,17 @@ port if 8000 is taken). Stop it with Ctrl+C.
 | `--no-browser` | do not open the browser |
 | `--host 0.0.0.0` | let other computers on the network connect (default: this computer only) |
 
-In the Forward Solver, the **AI assistant** panel turns a sentence such as
+Every module has an **AI assistant** panel (right column, with your own
+Anthropic or OpenAI API key, set in the panel's Settings). A sentence such as
 "damped pendulum with gamma = 0.5 for 10 s", or a pasted picture of the
-equations, into the system definition, the solver settings or the figure style
-of the trajectory plots (with
-your own Anthropic or OpenAI API key, set in the panel's Settings). The answer
-is checked by the equation parser and fills the editor; you review it and
-press Run.
+equations, becomes the module's setup: the system and solver settings
+(Forward), the controlled system and training size (Operator), the parameters
+to estimate and the synthetic data (Inverse), or the plant, targets and
+controllers (MPC). It can also restyle any figure with full Plotly access
+("remove the minor ticks", "legend under the plot", "8 x 6 cm at 600 dpi").
+Answers are checked like a run request and fill the panels; you review them
+and press Run or Train. The run history can be ordered by time or grouped by
+module, and each run can be deleted.
 
 Everything runs on your machine. The browser only shows the interface; a local
 FastAPI server accepts each job and starts a separate Python worker process

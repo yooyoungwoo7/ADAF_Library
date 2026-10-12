@@ -15,7 +15,7 @@ Three integrated features:
                user-defined CallableODESystem — uses ADA LPA Operator NN as
                surrogate (same OperatorNet/BatchLPABasis as built-in systems).
 """
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 # -- ODE systems ----------------------------------------------------------
 from .systems import (

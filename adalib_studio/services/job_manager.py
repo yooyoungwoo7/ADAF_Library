@@ -14,6 +14,7 @@ to replace the in-memory scheduler below.
 from __future__ import annotations
 
 import json
+import shutil
 import os
 import subprocess
 import threading
@@ -124,6 +125,21 @@ class JobManager:
         if proc is not None:
             kill_tree(proc)
         return self.get(job_id)
+
+    def delete(self, job_id: str) -> bool:
+        """Remove a finished job and its files (a training job takes its model with it).
+        Raises RuntimeError for a job that is still pending or running."""
+        with self._lock:
+            st = self.get(job_id)
+            if st is None:
+                return False
+            if st["status"] not in TERMINAL or job_id in self._procs or job_id in self._queue:
+                raise RuntimeError("The job is still running; stop it first.")
+            try:
+                shutil.rmtree(self._dir(job_id))
+            except OSError as exc:
+                raise RuntimeError(f"Could not delete the job files: {exc}")
+        return True
 
     def shutdown(self, kill_running: bool = False):
         """Stop scheduling. Running workers are left alone by default: they

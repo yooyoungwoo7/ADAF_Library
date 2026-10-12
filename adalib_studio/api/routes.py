@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 
 import json
 
 from ..examples.catalog import MPC_BUILTINS, MPC_PRESETS, OPERATOR_BUILTINS, OPERATOR_PRESETS, list_examples
-from ..schemas.assist import AssistForwardRequest, AssistForwardResponse, AssistSettingsUpdate, AssistStatus
+from ..schemas.assist import (AssistForwardRequest, AssistForwardResponse, AssistModuleRequest, AssistModuleResponse,
+                              AssistSettingsUpdate, AssistStatus)
 from ..schemas.common import JobCreated, SystemSpec, ValidateResponse
 from ..schemas.forward import ForwardRunRequest
 from ..schemas.inverse import InverseRunRequest
@@ -67,6 +70,14 @@ def assist_settings(upd: AssistSettingsUpdate):
 def assist_forward(req: AssistForwardRequest):
     try:
         return llm_assist.describe_forward(req)
+    except llm_assist.AssistError as exc:
+        raise HTTPException(exc.status, detail={"message": str(exc)})
+
+
+@router.post("/assist/{module}", response_model=AssistModuleResponse)
+def assist_module(module: Literal["operator", "inverse", "mpc"], req: AssistModuleRequest):
+    try:
+        return llm_assist.describe_module(module, req)
     except llm_assist.AssistError as exc:
         raise HTTPException(exc.status, detail={"message": str(exc)})
 
@@ -247,6 +258,16 @@ def job_log(job_id: str, request: Request, offset: int = Query(0, ge=0)):
 def job_cancel(job_id: str, request: Request):
     _status_or_404(request, job_id)
     return _jobs(request).cancel(job_id)
+
+
+@router.delete("/jobs/{job_id}")
+def job_delete(job_id: str, request: Request):
+    _status_or_404(request, job_id)
+    try:
+        _jobs(request).delete(job_id)
+    except RuntimeError as exc:
+        raise HTTPException(409, detail={"message": str(exc)})
+    return {"deleted": job_id}
 
 
 @router.get("/jobs/{job_id}/request")

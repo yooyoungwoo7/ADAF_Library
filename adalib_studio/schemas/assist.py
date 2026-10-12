@@ -1,7 +1,7 @@
 """Natural-language system definition (LLM assistant) requests and responses."""
 from __future__ import annotations
 
-from typing import Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -33,6 +33,10 @@ class AssistForwardRequest(BaseModel):
     current_time: Optional[TimeSpan] = None
     current_options: Optional[ForwardOptionsModel] = None
     current_plot_style: Optional[PlotStyleModel] = None
+    current_figure_style: Dict[str, Any] = Field(default_factory=dict)
+    # figures on screen (id, title, layout, trace list) and every figure id of the module
+    figures: List[Dict[str, Any]] = Field(default_factory=list, max_length=40)
+    figure_ids: List[str] = Field(default_factory=list, max_length=100)
     # earlier turns of this chat (oldest first)
     history: List[AssistMessage] = Field(default_factory=list, max_length=20)
     # browser language (navigator.language, e.g. "ko-KR"), used for the reply when the request is ambiguous
@@ -45,11 +49,38 @@ class AssistForwardRequest(BaseModel):
         return self
 
 
+class AssistModuleRequest(BaseModel):
+    """Operator / Inverse / MPC: the module's setup as the assistant sees it (see llm_assist)."""
+    prompt: str = Field("", max_length=4000)
+    images: List[AssistImage] = Field(default_factory=list, max_length=3)
+    provider: Optional[Provider] = None
+    state: Dict[str, Any] = Field(default_factory=dict)   # includes "figure_style"
+    figures: List[Dict[str, Any]] = Field(default_factory=list, max_length=40)
+    figure_ids: List[str] = Field(default_factory=list, max_length=100)
+    history: List[AssistMessage] = Field(default_factory=list, max_length=20)
+    language: Optional[str] = Field(None, max_length=35)
+
+    @model_validator(mode="after")
+    def _something_to_do(self):
+        if not self.prompt.strip() and not self.images:
+            raise ValueError("Write a request or attach an image")
+        return self
+
+
+class AssistModuleResponse(BaseModel):
+    state: Dict[str, Any]          # complete setup after the change
+    reply: str
+    provider: Provider
+    model: str
+    attempts: int
+
+
 class AssistForwardResponse(BaseModel):
     system: SystemSpec
     time: TimeSpan
     options: ForwardOptionsModel   # complete solver options after the change (unchanged ones kept)
     plot_style: Dict = Field(default_factory=dict)   # complete figure style after the change (set keys only)
+    figure_style: Dict[str, Any] = Field(default_factory=dict)   # complete free-form (Plotly) style after the change
     reply: str
     provider: Provider
     model: str
