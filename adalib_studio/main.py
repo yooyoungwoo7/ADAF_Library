@@ -31,6 +31,8 @@ if FRONTEND_DIST.is_dir():
     @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str):
         target = (FRONTEND_DIST / path).resolve()
-        if path and target.is_file() and FRONTEND_DIST.resolve() in target.parents:
+        if path and target.is_file() and FRONTEND_DIST.resolve() in target.parents and target.name != "index.html":
             return FileResponse(target)
-        return FileResponse(FRONTEND_DIST / "index.html")
+        # index.html names the hashed bundles of this build; revalidate it so an upgrade shows up on a
+        # normal reload instead of the browser reusing the previous version's page
+        return FileResponse(FRONTEND_DIST / "index.html", headers={"Cache-Control": "no-cache"})
