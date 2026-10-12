@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adalib-IFL"
-version = "0.1.6"
+version = "0.1.7"
 description = "ADAlib: Anti-Derivative Approximator (ADA) library for ODE forward simulation, inverse estimation, operator learning, and MPC, with the ADAlib Studio browser GUI"
 readme = "README.md"
 license = { file = "LICENSE" }
