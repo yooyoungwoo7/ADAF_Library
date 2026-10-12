@@ -15,6 +15,7 @@ import threading
 import time
 import urllib.request
 import webbrowser
+from pathlib import Path
 from typing import List, Optional
 
 DEFAULT_PORT = 8000
@@ -30,11 +31,16 @@ def _port_free(host: str, port: int) -> bool:
             return False
 
 
-def _studio_at(url: str) -> bool:
-    """True when an ADALib Studio server already answers at ``url``."""
+def _same_studio_at(url: str, runs_dir: Path) -> bool:
+    """True when an ADALib Studio server using ``runs_dir`` already answers at ``url``.
+
+    Another installation (e.g. a development server) on that port does not count:
+    this one then starts on the next free port with its own results.
+    """
     try:
         with urllib.request.urlopen(f"{url}/api/health", timeout=1.5) as r:
-            return "adalib_installed" in json.load(r)
+            running = json.load(r).get("runs_dir")
+        return running is not None and Path(running).resolve() == runs_dir.resolve()
     except Exception:
         return False
 
@@ -71,16 +77,22 @@ def main(argv: Optional[List[str]] = None) -> int:
             print(f"Port {port} is already in use. Choose another with --port.", file=sys.stderr)
             return 1
     else:
-        port = next((p for p in range(DEFAULT_PORT, DEFAULT_PORT + PORT_TRIES) if _port_free(args.host, p)), None)
+        from .config import RUNS_DIR
+
+        # reuse this installation's server if it is already up; otherwise take the first free port
+        port = None
+        for p in range(DEFAULT_PORT, DEFAULT_PORT + PORT_TRIES):
+            if _port_free(args.host, p):
+                port = port or p
+            elif _same_studio_at(f"http://{browse_host}:{p}", RUNS_DIR):
+                url = f"http://{browse_host}:{p}"
+                print(f"ADALib Studio is already running at {url}")
+                if not args.no_browser:
+                    webbrowser.open(url)
+                return 0
         if port is None:
             print(f"No free port in {DEFAULT_PORT}-{DEFAULT_PORT + PORT_TRIES - 1}. Choose one with --port.", file=sys.stderr)
             return 1
-        if port != DEFAULT_PORT and _studio_at(f"http://{browse_host}:{DEFAULT_PORT}"):
-            url = f"http://{browse_host}:{DEFAULT_PORT}"
-            print(f"ADALib Studio is already running at {url}")
-            if not args.no_browser:
-                webbrowser.open(url)
-            return 0
 
     import uvicorn
 

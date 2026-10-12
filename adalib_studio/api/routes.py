@@ -26,11 +26,13 @@ def _jobs(request: Request):
 
 
 @router.get("/health")
-def health():
+def health(request: Request):
     version = package_info.adalib_version()
     return {"status": "ok", "adalib_installed": version is not None, "adalib_version": version,
             "adalib_version_supported": package_info.version_supported(),
-            "dependencies": package_info.dependency_versions()}
+            "dependencies": package_info.dependency_versions(),
+            # lets `adalib-studio` tell its own running server from another installation
+            "runs_dir": str(_jobs(request).runs_dir)}
 
 
 @router.get("/capabilities")

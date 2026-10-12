@@ -33,4 +33,4 @@ CORS_ORIGINS = os.environ.get(
 ).split(",")
 
 ADALIB_DISTRIBUTION = "adalib-IFL"
-SUPPORTED_ADALIB_VERSIONS = ("0.1.0", "0.1.1")
+SUPPORTED_ADALIB_VERSIONS = ("0.1.0", "0.1.1", "0.1.2")
