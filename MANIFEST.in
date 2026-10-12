@@ -5,6 +5,8 @@ include THIRD_PARTY_NOTICES.md
 include pyproject.toml
 
 recursive-include adalib *.py
+recursive-include adalib_studio *.py
+graft adalib_studio/static
 recursive-include examples *.py
 recursive-include tests *.py
 

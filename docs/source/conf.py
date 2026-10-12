@@ -12,7 +12,7 @@ project = 'ADAlib'
 copyright = '2026, Youngwoo Yoo, Dayeong Kang, Suhyeong Lim, Sang-Hyun Rhie, Jeongsu Lee'
 author = 'Youngwoo Yoo, Dayeong Kang, Suhyeong Lim, Sang-Hyun Rhie, Jeongsu Lee'
 
-release = '0.1.0'
+release = '0.1.1'
 version = '0.1'
 
 # -- General configuration

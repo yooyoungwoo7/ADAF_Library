@@ -46,6 +46,47 @@ import adalib   # the PyPI distribution is "adalib-IFL"; the import name is "ada
 
 ---
 
+## ADAlib Studio (browser GUI)
+
+`pip install adalib-IFL` also installs **ADAlib Studio**, a local browser
+workspace for all four tasks: type the governing equations, choose the
+settings, run, and inspect or export the results, without writing code.
+
+```bash
+adalib-studio            # or: python -m adalib_studio
+```
+
+The server starts and the app opens at <http://127.0.0.1:8000> (the next free
+port if 8000 is taken). Stop it with Ctrl+C.
+
+| Option | Meaning |
+|---|---|
+| `--port 8100` | serve on a specific port |
+| `--runs DIR` | where job results go (default `~/adalib-studio/runs`) |
+| `--max-parallel 2` | jobs computed at the same time (default 1) |
+| `--no-browser` | do not open the browser |
+| `--host 0.0.0.0` | let other computers on the network connect (default: this computer only) |
+
+Everything runs on your machine. The browser only shows the interface; a local
+FastAPI server accepts each job and starts a separate Python worker process
+that imports `adalib` and computes it. Results, logs and trained surrogates
+stay under the runs directory across restarts.
+
+Troubleshooting on Windows:
+
+- `DLL load failed ... blocked by application control policy`: Windows 11
+  Smart App Control is blocking TensorFlow's DLLs (any TensorFlow install, not
+  only ADAlib). Turn it off under Windows Security > App & browser control >
+  Smart App Control settings.
+- `pip install` fails with a long-path error: TensorFlow's files exceed the
+  260-character path limit in deep folders. Create the virtual environment in
+  a short path such as `C:\Users\<you>\adalib-studio`, or enable long paths.
+
+The `adalib_studio/` directory is generated from the ADAlib Studio repository;
+change the GUI there, not in this repository.
+
+---
+
 ## Feature support
 
 | Feature | User-defined `CallableODESystem` | Built-in systems |
@@ -554,6 +595,7 @@ pytest -q tests/test_adalib_mpc_autodiff.py   # the fast pytest suite
 ```
 ADAF_Library/
 ├── adalib/                  # the installable package
+├── adalib_studio/           # ADAlib Studio GUI (generated copy; `adalib-studio` command)
 │   ├── _vendor/legacy/      # vendored ADA-F / LPA / operator-MPC backend (required at runtime)
 │   ├── systems/             # ODESystem, built-in systems, CallableODESystem, registry
 │   ├── forward/             # ForwardSolver, ForwardOptions

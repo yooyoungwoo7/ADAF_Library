@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adalib-IFL"
-version = "0.1.0"
-description = "ADAlib: Anti-Derivative Approximator (ADA) library for ODE forward simulation, inverse estimation, operator learning, and MPC"
+version = "0.1.1"
+description = "ADAlib: Anti-Derivative Approximator (ADA) library for ODE forward simulation, inverse estimation, operator learning, and MPC, with the ADAlib Studio browser GUI"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
@@ -37,6 +37,10 @@ dependencies = [
     "matplotlib>=3.7",
     "tqdm>=4.65",
     "h5py>=3.9",
+    # ADAlib Studio (adalib_studio): local web server for the browser GUI
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "pydantic>=2.7",
 ]
 
 [project.optional-dependencies]
@@ -44,7 +48,11 @@ dev = [
     "pytest>=7.4",
     "build>=1.0",
     "twine>=4.0",
+    "httpx>=0.27",
 ]
+
+[project.scripts]
+adalib-studio = "adalib_studio.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/yooyoungwoo7/ADAF_Library"
@@ -53,7 +61,11 @@ Source = "https://github.com/yooyoungwoo7/ADAF_Library"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["adalib*"]
+include = ["adalib*"]   # adalib and adalib_studio
+
+[tool.setuptools.package-data]
+# built frontend of ADAlib Studio (copied in by the Studio repo's scripts/sync_to_adalib.py)
+adalib_studio = ["static/**/*"]
 
 [tool.pytest.ini_options]
 markers = [
