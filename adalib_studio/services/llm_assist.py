@@ -155,10 +155,11 @@ Rules:
   transcribe it faithfully. Keep its symbols as names where valid (Greek letters spelled out: alpha, omega),
   take parameter values and initial conditions from it, and choose only what it leaves out (say so).
   Text with the image refines it ("only the first two equations", "use k = 3").
-- If the user names or describes a different system, replace the one on screen.
+- If the user names or describes a different system, or asks for a new one ("new", "make", "set up",
+  "define", "만들어", "구성해"), replace the one on screen. Only a message that asks for nothing
+  (a greeting, a question about the current system) leaves it unchanged; if in doubt, make the change.
 - If the user asks to modify the current system (a value, a term, the time span), change only that and
   return the complete updated system.
-  If the message asks for no change (a greeting, a question), return the current system unchanged.
 - "reply" language: the language of the user's latest request; if that is unclear (a name, a formula,
   a one-word message), the user's interface language given below.
 - Write "reply" as plain text: real characters (θ, ω) or names (theta), never \\u escapes, LaTeX or markdown.
