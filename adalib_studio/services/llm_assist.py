@@ -151,6 +151,10 @@ Rules:
 - Put every physical constant in "parameters" (do not hard-code it in the equations) so the user can edit it.
 - Values the user did not give: choose standard textbook values and say so in "reply".
 - At most 20 states and 50 parameters; t1 > t0. No control inputs.
+- If an image is attached, it shows the model (typeset or handwritten equations, a screenshot of a paper):
+  transcribe it faithfully. Keep its symbols as names where valid (Greek letters spelled out: alpha, omega),
+  take parameter values and initial conditions from it, and choose only what it leaves out (say so).
+  Text with the image refines it ("only the first two equations", "use k = 3").
 - If the user names or describes a different system, replace the one on screen.
 - If the user asks to modify the current system (a value, a term, the time span), change only that and
   return the complete updated system.
@@ -171,9 +175,33 @@ def _context(req: AssistForwardRequest) -> str:
 
 
 def _messages(req: AssistForwardRequest) -> List[dict]:
+    """Provider-neutral messages: {"role", "content": str, "images": [AssistImage]} (images optional)."""
     msgs = [{"role": m.role, "content": m.content} for m in req.history]
-    msgs.append({"role": "user", "content": f"{_context(req)}\n\nRequest: {req.prompt}"})
+    prompt = req.prompt.strip() or "Set up the system shown in the image."
+    if req.images:
+        prompt += f"\n({len(req.images)} image(s) attached.)"
+    msgs.append({"role": "user", "content": f"{_context(req)}\n\nRequest: {prompt}", "images": req.images})
     return msgs
+
+
+def _wire(provider: str, messages: List[dict]) -> List[dict]:
+    """Neutral messages -> the provider's format (images as content blocks)."""
+    out = []
+    for m in messages:
+        images = m.get("images") or []
+        if not images:
+            out.append({"role": m["role"], "content": m["content"]})
+        elif provider == "anthropic":
+            out.append({"role": m["role"], "content": [
+                *({"type": "image", "source": {"type": "base64", "media_type": im.media_type, "data": im.data}}
+                  for im in images),
+                {"type": "text", "text": m["content"]}]})
+        else:
+            out.append({"role": m["role"], "content": [
+                {"type": "text", "text": m["content"]},
+                *({"type": "image_url", "image_url": {"url": f"data:{im.media_type};base64,{im.data}"}}
+                  for im in images)]})
+    return out
 
 
 # ── providers ────────────────────────────────────────────────────────────
@@ -207,12 +235,13 @@ def _call(provider: str, model: str, key: str, messages: List[dict]) -> str:
         base = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com").rstrip("/")
         out = _post(f"{base}/v1/messages",
                     {"x-api-key": key, "anthropic-version": "2023-06-01"},
-                    {"model": model, "max_tokens": 4000, "system": INSTRUCTIONS, "messages": messages})
+                    {"model": model, "max_tokens": 4000, "system": INSTRUCTIONS,
+                     "messages": _wire(provider, messages)})
         return "".join(b.get("text", "") for b in out.get("content", []) if b.get("type") == "text")
     base = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
     out = _post(f"{base}/chat/completions",
                 {"authorization": f"Bearer {key}"},
-                {"model": model, "messages": [{"role": "system", "content": INSTRUCTIONS}, *messages],
+                {"model": model, "messages": [{"role": "system", "content": INSTRUCTIONS}, *_wire(provider, messages)],
                  "response_format": {"type": "json_object"}, "max_completion_tokens": 8000})
     choices = out.get("choices") or [{}]
     return (choices[0].get("message") or {}).get("content") or ""
