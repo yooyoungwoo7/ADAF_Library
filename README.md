@@ -69,7 +69,8 @@ port if 8000 is taken). Stop it with Ctrl+C.
 
 In the Forward Solver, the **AI assistant** panel turns a sentence such as
 "damped pendulum with gamma = 0.5 for 10 s", or a pasted picture of the
-equations, into the system definition (with
+equations, into the system definition, the solver settings or the figure style
+of the trajectory plots (with
 your own Anthropic or OpenAI API key, set in the panel's Settings). The answer
 is checked by the equation parser and fills the editor; you review it and
 press Run.

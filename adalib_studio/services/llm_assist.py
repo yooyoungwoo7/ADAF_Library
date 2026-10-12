@@ -29,6 +29,7 @@ from ..schemas.assist import (AssistForwardRequest, AssistForwardResponse, Assis
                               AssistSettingsUpdate, AssistStatus)
 from ..schemas.common import SystemSpec, TimeSpan
 from ..schemas.forward import ForwardOptionsModel
+from ..schemas.plot_style import PlotStyleModel, merge_style
 from .equation_parser import CONSTANTS, FUNCTIONS
 from .system_builder import validate_spec
 
@@ -119,7 +120,8 @@ so that the ODE residual is minimised, and Studio compares the result with a sci
 The users are engineers and researchers who already know they are using adalib; do not explain it.
 
 You are in the Forward Solver module, which solves an autonomous initial-value problem
-dx_i/dt = f_i(x; p) on [t0, t1]. Your job is only to define that problem; the user reviews it and presses Run.
+dx_i/dt = f_i(x; p) on [t0, t1]. You define that problem and its solver settings, and you style the
+trajectory figures (for papers and reports); the user reviews it and presses Run.
 
 Users often just name a system ("spring-damper", "Lotka-Volterra", "Duffing", "SIR model"), possibly in
 Korean. Then infer the standard model and choose, without asking questions:
@@ -139,9 +141,11 @@ Answer with ONE JSON object and nothing else:
     "equations": ["-k*x"]
   }},
   "time": {{"t0": 0.0, "t1": 5.0}},
-  "options": {{"n_seg": 100, "Nt_total": 5000}}
+  "options": {{"n_seg": 100, "Nt_total": 5000}},
+  "plot_style": {{"colors": {{"x": "#d62728"}}, "line_width": 2}}
 }}
-"options" is optional: include only the solver settings to change (omit it, or use {{}}, to keep them).
+"system" and "time" may be omitted to keep the current ones (e.g. for a figure-only or solver-only request).
+"options" and "plot_style" are optional: include only what changes.
 
 Rules:
 - equations[i] is the right-hand side of d(states[i])/dt, same order and count as states.
@@ -173,6 +177,17 @@ Rules:
   truncation (ADA-F, 1-2000); order LPA polynomial order (1-50); dtype "float64" or "float32";
   gamma (>0) and L basis time-scale parameters. If asked for good settings for this system, choose
   them and explain briefly.
+- Figure style ("plot_style"), applied at once to the Trajectories plots without re-running. Include only
+  the keys to change; set a key to null to restore its default. Keys:
+  font_family ("Times New Roman", "Arial", ...), font_size / title_font_size / tick_font_size /
+  legend_font_size (pt); line_width (ADA lines); colors {{state: colour}} and dashes {{state: "solid"|"dash"|
+  "dot"|"dashdot"|"longdash"}} for the ADA line of each state; show_reference (bool), ref_color,
+  ref_line_width, ref_dash for the reference solution; title, x_title, y_title (one plot); y_titles and
+  panel_titles {{state: text}} (per-state panels); x_range / y_range [low, high]; log_y; grid;
+  legend_position "top"|"top-left"|"top-right"|"bottom-left"|"bottom-right"|"right"|"hidden"; legend_box;
+  ada_label / ref_label (legend names); export_width_cm, export_height_cm, export_dpi (72-1200),
+  export_format "png"|"svg" for saving. Colours: hex (#d62728), CSS names (red) or rgb(...).
+  Per-state maps use the state names exactly. Put units in axis titles ("Time [s]").
 - "reply" language: the language of the user's latest request; if that is unclear (a name, a formula,
   a one-word message), the user's interface language given below.
 - Write "reply" as plain text: real characters (θ, ω) or names (theta), never \\u escapes, LaTeX or markdown.
@@ -182,6 +197,8 @@ Rules:
 def _context(req: AssistForwardRequest) -> str:
     lang = f"User interface language: {req.language}.\n" if req.language else ""
     options = json.dumps({"options": (req.current_options or ForwardOptionsModel()).model_dump()})
+    style = (req.current_plot_style or PlotStyleModel()).model_dump(exclude_none=True)
+    options += "\nCurrent figure style (unset keys use the defaults): " + json.dumps({"plot_style": style}, ensure_ascii=False)
     if req.current_system is None:
         return lang + "There is no system on screen yet. Current solver settings: " + options
     cur = {"system": req.current_system.model_dump(include={"name", "states", "parameters", "equations"}),
@@ -273,25 +290,40 @@ def _clean_reply(reply: str) -> str:
     return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", reply).strip()
 
 
-def _parse(text: str, current_options: Optional[ForwardOptionsModel] = None
-           ) -> Tuple[SystemSpec, TimeSpan, ForwardOptionsModel, str]:
-    """JSON answer -> (system, time, options, reply); raises ValueError with a message for the model."""
+def _parse(text: str, req: AssistForwardRequest) -> Tuple[SystemSpec, TimeSpan, ForwardOptionsModel, dict, str]:
+    """JSON answer -> (system, time, options, plot_style, reply); raises ValueError with a message for the model."""
     m = re.search(r"\{.*\}", text, re.S)          # tolerate ```json fences or a stray sentence
     if not m:
         raise ValueError("The answer was not a JSON object.")
     data = json.loads(m.group(0))
+    if "system" not in data and req.current_system is None:
+        raise ValueError('There is no system on screen, so "system" is required.')
     try:
-        system = SystemSpec(**{**data["system"], "controls": []})
-        time = TimeSpan(**data.get("time", {}))
-    except KeyError as exc:
-        raise ValueError(f"Missing field {exc}.")
+        system = (SystemSpec(**{**data["system"], "controls": []}) if "system" in data
+                  else req.current_system)
+        time = (TimeSpan(**(data.get("time") or {})) if "time" in data or "system" in data
+                else req.current_time or TimeSpan())
     except ValidationError as exc:
         raise ValueError("; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()))
     check = validate_spec(system)
     if not check.ok:
         raise ValueError("; ".join(e.message for e in check.errors))
-    options = _merge_options(current_options or ForwardOptionsModel(), data.get("options") or {})
-    return system, time, options, _clean_reply(str(data.get("reply", "")))
+    options = _merge_options(req.current_options or ForwardOptionsModel(), data.get("options") or {})
+    style = _merge_plot_style(req.current_plot_style, data.get("plot_style") or {}, system.state_names)
+    return system, time, options, style, _clean_reply(str(data.get("reply", "")))
+
+
+def _merge_plot_style(current: Optional[PlotStyleModel], patch, states) -> dict:
+    if not isinstance(patch, dict):
+        raise ValueError('"plot_style" must be an object of style keys to change.')
+    unknown = sorted(set(patch) - set(PlotStyleModel.model_fields))
+    if unknown:
+        raise ValueError(f"Unknown plot_style key(s) {unknown}; valid: {sorted(PlotStyleModel.model_fields)}.")
+    try:
+        return merge_style(current.model_dump(exclude_none=True) if current else {}, patch, states)
+    except ValidationError as exc:
+        raise ValueError("plot_style: " + "; ".join(
+            (f"{'.'.join(map(str, e['loc']))}: " if e["loc"] else "") + e["msg"] for e in exc.errors()))
 
 
 def _merge_options(current: ForwardOptionsModel, patch) -> ForwardOptionsModel:
@@ -322,9 +354,9 @@ def describe_forward(req: AssistForwardRequest) -> AssistForwardResponse:
     for attempt in range(1, MAX_ATTEMPTS + 1):
         text = _call(provider, model, key, messages)
         try:
-            system, time, options, reply = _parse(text, req.current_options)
-            return AssistForwardResponse(system=system, time=time, options=options, reply=reply,
-                                         provider=provider, model=model, attempts=attempt)
+            system, time, options, style, reply = _parse(text, req)
+            return AssistForwardResponse(system=system, time=time, options=options, plot_style=style,
+                                         reply=reply, provider=provider, model=model, attempts=attempt)
         except (ValueError, json.JSONDecodeError) as exc:
             problem = str(exc)
             messages = messages + [

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from .common import SystemSpec, TimeSpan
 from .forward import ForwardOptionsModel
+from .plot_style import PlotStyleModel
 
 Provider = Literal["anthropic", "openai"]
 
@@ -31,6 +32,7 @@ class AssistForwardRequest(BaseModel):
     current_system: Optional[SystemSpec] = None
     current_time: Optional[TimeSpan] = None
     current_options: Optional[ForwardOptionsModel] = None
+    current_plot_style: Optional[PlotStyleModel] = None
     # earlier turns of this chat (oldest first)
     history: List[AssistMessage] = Field(default_factory=list, max_length=20)
     # browser language (navigator.language, e.g. "ko-KR"), used for the reply when the request is ambiguous
@@ -47,6 +49,7 @@ class AssistForwardResponse(BaseModel):
     system: SystemSpec
     time: TimeSpan
     options: ForwardOptionsModel   # complete solver options after the change (unchanged ones kept)
+    plot_style: Dict = Field(default_factory=dict)   # complete figure style after the change (set keys only)
     reply: str
     provider: Provider
     model: str
